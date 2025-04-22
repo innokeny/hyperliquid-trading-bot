@@ -6,21 +6,21 @@ from src.config import settings
 
 async def handle_orderbook(data: dict) -> None:
     """Handle orderbook updates."""
+    print("\nRaw orderbook data:", json.dumps(data, indent=2))
+    
     if "data" in data:
-        orderbook = data["data"]
+        orderbook_data = data["data"]
         print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Orderbook Update:")
-        print(f"Bids: {orderbook.get('bids', [])[:5]}")  # Show top 5 bids
-        print(f"Asks: {orderbook.get('asks', [])[:5]}")  # Show top 5 asks
+        print("Orderbook data:", orderbook_data)
 
 async def handle_trades(data: dict) -> None:
     """Handle trade updates."""
+    print("\nRaw trades data:", json.dumps(data, indent=2))
+    
     if "data" in data:
-        trades = data["data"]
-        for trade in trades:
-            print(f"\n[{datetime.now().strftime('%H:%M:%S')}] New Trade:")
-            print(f"Price: {trade.get('px')}")
-            print(f"Size: {trade.get('sz')}")
-            print(f"Side: {trade.get('side')}")
+        trades_data = data["data"]
+        print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Trades Update:")
+        print("Trades data:", trades_data)
 
 async def main():
     """Main function to demonstrate market data streaming."""
@@ -28,13 +28,18 @@ async def main():
     streamer = MarketDataStreamer()
     
     # Register callbacks for different event types
-    streamer.register_callback("l2Book", handle_orderbook)
+    streamer.register_callback("orderbook", handle_orderbook)
     streamer.register_callback("trades", handle_trades)
     
     try:
         print("Starting market data stream...")
         print(f"Trading pair: {streamer.trading_pair}")
         print("Press Ctrl+C to stop")
+
+        # Get historical candlestick data
+        print("\nFetching candlestick data...")
+        candles = await streamer.get_candles(interval="1m", limit=50)
+        print(f"Retrieved {len(candles)} candles")
         
         # Start the stream
         await streamer.start()
