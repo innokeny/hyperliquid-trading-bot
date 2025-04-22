@@ -79,3 +79,65 @@ python src/main.py
 ## Contributing
 
 [Your Contributing Guidelines Here]
+
+## Environment Setup
+
+1. Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edit the `.env` file with your Hyperliquid credentials and settings:
+
+   ```env
+   # Required Settings
+   HYPERLIQUID_SECRET_KEY=your_private_key_here
+   
+   # Optional Settings
+   HYPERLIQUID_ACCOUNT_ADDRESS=your_account_address_here
+   HYPERLIQUID_API_URL=https://api.hyperliquid.xyz
+   
+   # Trading Settings
+   TRADING_PAIR=BTC-PERP
+   MAX_POSITION_SIZE=0.1
+   LEVERAGE=1
+   
+   # Risk Management
+   STOP_LOSS_PERCENTAGE=0.02
+   TAKE_PROFIT_PERCENTAGE=0.04
+   
+   # Data Settings
+   DATA_DIR=data
+   CACHE_DIR=cache
+   ```
+
+3. Make sure to:
+   - Keep your `.env` file secure and never commit it to version control
+   - Use a strong private key for `HYPERLIQUID_SECRET_KEY`
+   - Set appropriate risk management parameters based on your strategy
+   - Create the data and cache directories if they don't exist
+
+## Security Notes
+
+- The `HYPERLIQUID_SECRET_KEY` is your private key. Keep it secure and never share it.
+- If you don't provide `HYPERLIQUID_ACCOUNT_ADDRESS`, the bot will use the address derived from your private key.
+- Make sure your `.env` file has proper file permissions (600) to prevent unauthorized access.
+- Consider using a separate account for trading with limited funds.
+
+## Development
+
+1. Create a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Run tests:
+   ```bash
+   pytest
+   ```

@@ -8,14 +8,12 @@ from src.config import Settings
 def mock_env_vars(monkeypatch):
     """Fixture to set up mock environment variables."""
     env_vars = {
-        "HYPERLIQUID_API_KEY": "test_api_key",
-        "HYPERLIQUID_API_SECRET": "test_api_secret",
+        "HYPERLIQUID_SECRET_KEY": "test_private_key",
+        "HYPERLIQUID_ACCOUNT_ADDRESS": "test_address",
         "HYPERLIQUID_API_URL": "https://test.api.hyperliquid.xyz",
         "TRADING_PAIR": "BTC-PERP",
         "MAX_POSITION_SIZE": "0.1",
         "LEVERAGE": "1",
-        "MODEL_PATH": "models/test_model.pth",
-        "PREDICTION_THRESHOLD": "0.7",
         "STOP_LOSS_PERCENTAGE": "0.02",
         "TAKE_PROFIT_PERCENTAGE": "0.04",
         "DATA_DIR": "test_data",
@@ -29,29 +27,17 @@ def test_settings_initialization(mock_env_vars):
     """Test that settings are correctly initialized from environment variables."""
     settings = Settings()
     
-    assert settings.HYPERLIQUID_API_KEY == mock_env_vars["HYPERLIQUID_API_KEY"]
-    assert settings.HYPERLIQUID_API_SECRET == mock_env_vars["HYPERLIQUID_API_SECRET"]
+    assert settings.HYPERLIQUID_SECRET_KEY == mock_env_vars["HYPERLIQUID_SECRET_KEY"]
+    assert settings.HYPERLIQUID_ACCOUNT_ADDRESS == mock_env_vars["HYPERLIQUID_ACCOUNT_ADDRESS"]
     assert settings.HYPERLIQUID_API_URL == mock_env_vars["HYPERLIQUID_API_URL"]
     assert settings.TRADING_PAIR == mock_env_vars["TRADING_PAIR"]
     assert settings.MAX_POSITION_SIZE == float(mock_env_vars["MAX_POSITION_SIZE"])
     assert settings.LEVERAGE == int(mock_env_vars["LEVERAGE"])
-    assert str(settings.MODEL_PATH) == mock_env_vars["MODEL_PATH"]
-    assert settings.PREDICTION_THRESHOLD == float(mock_env_vars["PREDICTION_THRESHOLD"])
     assert settings.STOP_LOSS_PERCENTAGE == float(mock_env_vars["STOP_LOSS_PERCENTAGE"])
     assert settings.TAKE_PROFIT_PERCENTAGE == float(mock_env_vars["TAKE_PROFIT_PERCENTAGE"])
     assert str(settings.DATA_DIR) == mock_env_vars["DATA_DIR"]
     assert str(settings.CACHE_DIR) == mock_env_vars["CACHE_DIR"]
 
-# def test_required_fields(mock_env_vars, monkeypatch):
-#     """Test that required fields raise errors when not provided."""
-#     # Remove required fields one by one and verify error is raised
-#     required_fields = ["HYPERLIQUID_API_KEY", "HYPERLIQUID_API_SECRET"]
-    
-#     for field in required_fields:
-#         monkeypatch.delenv(field)
-#         with pytest.raises(ValidationError):
-#             Settings()
-#         monkeypatch.setenv(field, mock_env_vars[field])
 
 def test_directory_creation(mock_env_vars, tmp_path):
     """Test that data and cache directories are created."""
@@ -73,13 +59,17 @@ def test_directory_creation(mock_env_vars, tmp_path):
 
 def test_default_values():
     """Test that default values are used when environment variables are not set."""
+    # Clear all environment variables
+    for key in os.environ:
+        if key.startswith(("HYPERLIQUID_", "TRADING_", "MAX_", "LEVERAGE_", "STOP_", "TAKE_", "DATA_", "CACHE_")):
+            os.environ.pop(key)
+    
     settings = Settings()
     
     # Test default values
-    assert settings.HYPERLIQUID_API_URL == "https://api.hyperliquid.xyz"
+    assert settings.HYPERLIQUID_API_URL == "https://api.hyperliquid-testnet.xyz"
     assert settings.TRADING_PAIR == "BTC-PERP"
     assert settings.MAX_POSITION_SIZE == 0.1
     assert settings.LEVERAGE == 1
-    assert settings.PREDICTION_THRESHOLD == 0.7
     assert settings.STOP_LOSS_PERCENTAGE == 0.02
     assert settings.TAKE_PROFIT_PERCENTAGE == 0.04 
