@@ -38,8 +38,8 @@ def main():
         candles = streamer.get_candles(interval="1m", limit=50)
         print(f"Retrieved {len(candles)} candles")
     
-        streamer._subscribe("trades", callback=handle_trades)
-        streamer._subscribe("candle", candle_interval="1m", callback=handle_candles)
+        streamer.subscribe("trades", callback=handle_trades)
+        streamer.subscribe("candle", candle_interval="1m", callback=handle_candles)
         
     except KeyboardInterrupt:
         print("\nStopping market data stream...")

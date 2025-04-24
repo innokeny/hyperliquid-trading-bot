@@ -18,7 +18,7 @@ class MarketDataStreamer:
         self.coin = coin
         self.info = info
     
-    def _subscribe(self, event_type: str, candle_interval: Optional[str] = None, callback: Callable = logger.info) -> None:
+    def subscribe(self, event_type: str, candle_interval: Optional[str] = None, callback: Callable = logger.info) -> None:
         """Subscribe to a specific event type."""
         subscribe_message: Subscription = {
                 "type": event_type,
