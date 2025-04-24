@@ -27,13 +27,16 @@ def main():
     """Main function to demonstrate market data streaming."""
     connection = HyperliquidConnection()
     connection.setup(base_url=MAINNET_API_URL)
-    info, exchange = connection.get_connection()
+    info, _ = connection.get_connection()
     streamer = MarketDataStreamer(info)
     
     try:
         print("Starting market data stream...")
         print(f"Trading pair: {streamer.coin}")
         print("Press Ctrl+C to stop")
+
+        candles = streamer.get_candles(interval="1m", limit=50)
+        print(f"Retrieved {len(candles)} candles")
     
         streamer._subscribe("trades", callback=handle_trades)
         streamer._subscribe("candle", candle_interval="1m", callback=handle_candles)
