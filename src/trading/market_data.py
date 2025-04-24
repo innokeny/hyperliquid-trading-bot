@@ -1,9 +1,5 @@
-import asyncio
-import json
 import time
-from typing import Callable, Dict, Any, Optional, Union, List
-import websockets
-import aiohttp
+from typing import Callable, Dict, Any, Optional, List
 from src.config import settings
 from hyperliquid.info import Info
 from hyperliquid.utils.types import Subscription
