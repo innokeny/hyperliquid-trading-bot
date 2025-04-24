@@ -4,6 +4,7 @@ from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from hyperliquid.exchange import Exchange
 from hyperliquid.info import Info
+from hyperliquid.utils.constants import TESTNET_API_URL
 from loguru import logger
 from src.config import settings
 
@@ -17,7 +18,7 @@ class HyperliquidConnection:
         self.exchange: Optional[Exchange] = None
         self.info: Optional[Info] = None
         
-    def setup(self, base_url: Optional[str] = None, skip_ws: bool = False) -> Tuple[str, Info, Exchange]:
+    def setup(self, base_url: str = TESTNET_API_URL, skip_ws: bool = False) -> Tuple[str, Info, Exchange]:
         """
         Set up the connection to Hyperliquid.
         
@@ -33,18 +34,15 @@ class HyperliquidConnection:
             self.account = Account.from_key(settings.HYPERLIQUID_SECRET_KEY)
             self.address = settings.HYPERLIQUID_ACCOUNT_ADDRESS
             
-            # Use account address if not specified
             if not self.address:
                 self.address = self.account.address
                 logger.info(f"Using account address: {self.address}")
             elif self.address != self.account.address:
                 logger.info(f"Using agent address: {self.account.address}")
                 
-            # Initialize Info and Exchange
-            self.info = Info(base_url or settings.HYPERLIQUID_API_URL, skip_ws)
-            self.exchange = Exchange(self.account, base_url or settings.HYPERLIQUID_API_URL, account_address=self.address)
+            self.info = Info(base_url, skip_ws)
+            self.exchange = Exchange(self.account, base_url, account_address=self.address)
             
-            # Verify account has equity
             self._verify_account_equity()
             
             logger.success("Successfully connected to Hyperliquid")

@@ -11,9 +11,8 @@ class Settings(BaseSettings):
     
     HYPERLIQUID_SECRET_KEY: str
     HYPERLIQUID_ACCOUNT_ADDRESS: Optional[str] = None
-    HYPERLIQUID_API_URL: str = "https://api.hyperliquid.xyz"
     
-    TRADING_PAIR: str = "BTC-PERP"
+    COIN: str = "BTC"
     MAX_POSITION_SIZE: float = 0.1
     LEVERAGE: int = 1
     STOP_LOSS_PERCENTAGE: float = 0.02
