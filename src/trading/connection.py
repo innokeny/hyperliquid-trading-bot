@@ -6,7 +6,7 @@ from hyperliquid.exchange import Exchange
 from hyperliquid.info import Info
 from hyperliquid.utils.constants import TESTNET_API_URL
 from loguru import logger
-from src.config import settings
+from src.settings import settings
 
 class HyperliquidConnection:
     """Handles authentication and connection to Hyperliquid exchange."""

@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import pytest
 from pydantic import ValidationError
-from src.config import Settings
+from src.settings import Settings
 
 @pytest.fixture
 def mock_env_vars(monkeypatch):

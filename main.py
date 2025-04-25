@@ -2,7 +2,7 @@ import asyncio
 import json
 from datetime import datetime
 from src.trading.market_data import MarketDataStreamer
-from src.config import settings
+from src.settings import settings
 
 async def handle_orderbook(data: dict) -> None:
     """Handle orderbook updates."""

@@ -1,26 +1,23 @@
 from typing import Dict, List, Optional, Any, Tuple
-import logging
+from loguru import logger
 import numpy as np
 import pandas as pd
 from datetime import datetime
-from ..ml.model_inference import ModelInference
-from src.config.ml_config import MLConfig
-
-logger = logging.getLogger(__name__)
+from src.ml.model_inference import ModelInference
+from src.settings import settings
 
 class TradingStrategy:
     """Implements trading strategy with signal generation, position sizing, and risk management."""
 
-    def __init__(self, model_inference: ModelInference, config: MLConfig):
+    def __init__(self, model_inference: ModelInference):
         """
         Initialize the trading strategy.
 
         Args:
             model_inference: ModelInference instance for making predictions
-            config: MLConfig instance containing strategy parameters
         """
         self.model_inference = model_inference
-        self.config = config
+        self.config = settings.get_strategy_config()
         self.current_position = None
         self.trade_history = []
         self.entry_signals = []
@@ -41,11 +38,11 @@ class TradingStrategy:
             Dictionary containing trading signals and metadata
         """
         try:
-            # Convert market data to DataFrame
-            df = self._prepare_market_data(market_data)
+            # Convert market data to list of candles format
+            candles = self._prepare_market_data(market_data)
             
             # Get model prediction
-            features = self.model_inference.prepare_features(df)
+            features = self.model_inference.prepare_features(candles)
             prediction = self.model_inference.make_prediction(features)
             
             # Process prediction into trading signal
@@ -75,7 +72,7 @@ class TradingStrategy:
             exit_conditions = []
             
             # Get current price and indicators
-            current_price = market_data['close']
+            current_price = market_data['c']
             rsi = market_data.get('rsi', 50)
             macd = market_data.get('macd', 0)
             macd_signal = market_data.get('signal', 0)
@@ -92,7 +89,7 @@ class TradingStrategy:
                     entry_conditions.append("MACD bullish crossover")
                 
                 # Volatility breakout
-                if volatility > self.config.volatility_threshold:
+                if volatility > self.config['volatility_threshold']:
                     entry_conditions.append("Volatility breakout")
                 
                 # Price above moving average
@@ -110,7 +107,7 @@ class TradingStrategy:
                     entry_conditions.append("MACD bearish crossover")
                 
                 # Volatility breakout
-                if volatility > self.config.volatility_threshold:
+                if volatility > self.config['volatility_threshold']:
                     entry_conditions.append("Volatility breakout")
                 
                 # Price below moving average
@@ -160,10 +157,10 @@ class TradingStrategy:
             
         # Calculate trailing stop price
         if self.current_position['side'] == "LONG":
-            trailing_stop = self.current_position['entry_price'] * (1 + self.config.trailing_stop_percentage)
+            trailing_stop = self.current_position['entry_price'] * (1 - self.config['trailing_stop_percentage'])
             return current_price <= trailing_stop
         else:
-            trailing_stop = self.current_position['entry_price'] * (1 - self.config.trailing_stop_percentage)
+            trailing_stop = self.current_position['entry_price'] * (1 + self.config['trailing_stop_percentage'])
             return current_price >= trailing_stop
 
     def _check_rsi_divergence(self, market_data: Dict[str, Any], current_price: float) -> bool:
@@ -181,63 +178,76 @@ class TradingStrategy:
             # Bullish divergence
             return current_price < self.current_position['entry_price'] and current_rsi > previous_rsi
 
-    def _prepare_market_data(self, market_data: Dict[str, Any]) -> pd.DataFrame:
+    def _prepare_market_data(self, market_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Prepare market data for feature generation."""
-        # Convert market data to DataFrame format
-        df = pd.DataFrame([market_data])
-        return df
+        # Convert market data to list of candles format
+        candles = [{
+            't': market_data.get('t', 0),
+            'o': market_data.get('o', 0),
+            'h': market_data.get('h', 0),
+            'l': market_data.get('l', 0),
+            'c': market_data.get('c', 0),
+            'v': market_data.get('v', 0),
+            'indicators': {
+                'rsi': market_data.get('rsi', 50),
+                'macd': market_data.get('macd', 0),
+                'signal': market_data.get('signal', 0),
+                'volatility': market_data.get('volatility', 0)
+            }
+        }]
+        return candles
 
     def _calculate_dynamic_stop_loss(self, entry_price: float, market_data: Dict[str, Any]) -> float:
         """Calculate dynamic stop loss based on market conditions."""
         try:
             # Base stop loss percentage
-            base_stop_loss = entry_price * (1 - self.config.stop_loss_percentage)
+            base_stop_loss = entry_price * (1 - self.config['stop_loss_percentage'])
             
             # Adjust for volatility
             volatility = market_data.get('volatility', 0)
-            volatility_adjustment = volatility * self.config.volatility_multiplier
+            volatility_adjustment = volatility * self.config['volatility_multiplier']
             stop_loss = base_stop_loss * (1 - volatility_adjustment)
             
             # Adjust for ATR if available
             atr = market_data.get('atr', 0)
             if atr > 0:
-                atr_adjustment = atr * self.config.atr_multiplier
+                atr_adjustment = atr * self.config['atr_multiplier']
                 stop_loss = min(stop_loss, entry_price - atr_adjustment)
             
             # Ensure minimum stop loss distance
-            min_stop_distance = entry_price * self.config.min_stop_distance_percentage
+            min_stop_distance = entry_price * self.config['min_stop_distance_percentage']
             stop_loss = max(stop_loss, entry_price - min_stop_distance)
             
             return stop_loss
         except Exception as e:
             logger.error(f"Error calculating dynamic stop loss: {str(e)}")
-            return entry_price * (1 - self.config.stop_loss_percentage)
+            return entry_price * (1 - self.config['stop_loss_percentage'])
 
     def _calculate_dynamic_take_profit(self, entry_price: float, market_data: Dict[str, Any]) -> float:
         """Calculate dynamic take profit based on market conditions."""
         try:
             # Base take profit percentage
-            base_take_profit = entry_price * (1 + self.config.take_profit_percentage)
+            base_take_profit = entry_price * (1 + self.config['take_profit_percentage'])
             
             # Adjust for volatility
             volatility = market_data.get('volatility', 0)
-            volatility_adjustment = volatility * self.config.volatility_multiplier
+            volatility_adjustment = volatility * self.config['volatility_multiplier']
             take_profit = base_take_profit * (1 + volatility_adjustment)
             
             # Adjust for ATR if available
             atr = market_data.get('atr', 0)
             if atr > 0:
-                atr_adjustment = atr * self.config.atr_multiplier
+                atr_adjustment = atr * self.config['atr_multiplier']
                 take_profit = max(take_profit, entry_price + atr_adjustment)
             
             # Ensure minimum take profit distance
-            min_profit_distance = entry_price * self.config.min_profit_distance_percentage
+            min_profit_distance = entry_price * self.config['min_profit_distance_percentage']
             take_profit = min(take_profit, entry_price + min_profit_distance)
             
             return take_profit
         except Exception as e:
             logger.error(f"Error calculating dynamic take profit: {str(e)}")
-            return entry_price * (1 + self.config.take_profit_percentage)
+            return entry_price * (1 + self.config['take_profit_percentage'])
 
     def _update_trailing_stop(self, current_price: float, market_data: Dict[str, Any]) -> None:
         """Update trailing stop based on current price and market conditions."""
@@ -250,14 +260,14 @@ class TradingStrategy:
                 if self.highest_price is None or current_price > self.highest_price:
                     self.highest_price = current_price
                     # Calculate new trailing stop
-                    trailing_stop = self.highest_price * (1 - self.config.trailing_stop_percentage)
+                    trailing_stop = self.highest_price * (1 - self.config['trailing_stop_percentage'])
                     if self.trailing_stop_price is None or trailing_stop > self.trailing_stop_price:
                         self.trailing_stop_price = trailing_stop
             else:
                 if self.lowest_price is None or current_price < self.lowest_price:
                     self.lowest_price = current_price
                     # Calculate new trailing stop
-                    trailing_stop = self.lowest_price * (1 + self.config.trailing_stop_percentage)
+                    trailing_stop = self.lowest_price * (1 + self.config['trailing_stop_percentage'])
                     if self.trailing_stop_price is None or trailing_stop < self.trailing_stop_price:
                         self.trailing_stop_price = trailing_stop
         except Exception as e:
@@ -291,7 +301,7 @@ class TradingStrategy:
             
             # Check volatility stop
             volatility = market_data.get('volatility', 0)
-            if volatility > self.config.max_volatility:
+            if volatility > self.config['max_volatility']:
                 return True, "Volatility stop triggered"
             
             return False, None
@@ -307,10 +317,10 @@ class TradingStrategy:
             confidence = prediction['confidence']
             
             # Map prediction to trading signal
-            signal = self.config.signal_mapping.get(str(raw_prediction), "HOLD")
+            signal = self.config['signal_mapping'].get(str(raw_prediction), "HOLD")
             
             # Calculate price targets based on current price
-            current_price = market_data['close']
+            current_price = market_data['c']
             stop_loss = self._calculate_dynamic_stop_loss(current_price, market_data)
             take_profit = self._calculate_dynamic_take_profit(current_price, market_data)
             
@@ -333,7 +343,6 @@ class TradingStrategy:
                 'take_profit': take_profit,
                 'trailing_stop': self.trailing_stop_price,
                 'raw_prediction': raw_prediction,
-                'metadata': prediction['metadata']
             }
         except Exception as e:
             logger.error(f"Error processing signal: {str(e)}")
@@ -347,7 +356,7 @@ class TradingStrategy:
                 return signal
 
             # Check confidence threshold
-            if signal['confidence'] < self.config.min_confidence:
+            if signal['confidence'] < self.config['min_confidence']:
                 signal['signal'] = "HOLD"
                 signal['reason'] = "Low confidence"
                 return signal
@@ -363,7 +372,7 @@ class TradingStrategy:
 
             # Check volatility
             volatility = market_data.get('volatility', 0)
-            if volatility > self.config.max_volatility:
+            if volatility > self.config['max_volatility']:
                 signal['signal'] = "HOLD"
                 signal['reason'] = "High volatility"
                 return signal
@@ -384,15 +393,15 @@ class TradingStrategy:
             available_capital = market_data.get('available_capital', 0)
             
             # Calculate base position size
-            base_size = available_capital * self.config.max_position_size
+            base_size = available_capital * self.config['max_position_size']
             
             # Adjust position size based on confidence
-            confidence_factor = signal['confidence'] / self.config.prediction_threshold
+            confidence_factor = signal['confidence'] / self.config['prediction_threshold']
             position_size = base_size * confidence_factor
             
             # Adjust for volatility
             volatility = market_data.get('volatility', 0)
-            volatility_factor = 1 - (volatility / self.config.max_volatility)
+            volatility_factor = 1 - (volatility / self.config['max_volatility'])
             position_size = position_size * volatility_factor
             
             # Ensure position size is within limits
