@@ -1,11 +1,9 @@
 from typing import Dict, Optional, List, Union
 from hyperliquid.info import Info
 from hyperliquid.exchange import Exchange
-import logging
+from loguru import logger
 from dataclasses import dataclass
 from datetime import datetime
-
-logger = logging.getLogger(__name__)
 
 @dataclass
 class Position:
@@ -37,7 +35,7 @@ class PositionManager:
         self.positions: Dict[str, Position] = {}  # Track positions by coin
         self.position_history: List[Dict] = []  # Track position history
         
-    async def update_positions(self) -> Dict[str, Position]:
+    def update_positions(self) -> Dict[str, Position]:
         """
         Update all positions from the exchange.
         
@@ -46,7 +44,7 @@ class PositionManager:
         """
         try:
             # Get user state which includes positions
-            user_state = await self.info.user_state(self.exchange.wallet.address)
+            user_state = self.info.user_state(self.exchange.wallet.address)
             
             # Clear existing positions
             self.positions.clear()
@@ -100,7 +98,7 @@ class PositionManager:
             logger.error(f"Error updating positions: {str(e)}")
             raise
             
-    async def get_position(self, coin: str) -> Optional[Position]:
+    def get_position(self, coin: str) -> Optional[Position]:
         """
         Get position for a specific coin.
         
@@ -112,14 +110,14 @@ class PositionManager:
         """
         try:
             # Update positions first to ensure we have latest data
-            await self.update_positions()
+            self.update_positions()
             return self.positions.get(coin)
             
         except Exception as e:
             logger.error(f"Error getting position for {coin}: {str(e)}")
             raise
             
-    async def get_position_size(self, coin: str) -> float:
+    def get_position_size(self, coin: str) -> float:
         """
         Get the current position size for a coin.
         
@@ -130,14 +128,14 @@ class PositionManager:
             Position size (positive for long, negative for short)
         """
         try:
-            position = await self.get_position(coin)
+            position = self.get_position(coin)
             return position.size if position else 0.0
             
         except Exception as e:
             logger.error(f"Error getting position size for {coin}: {str(e)}")
             raise
             
-    async def get_position_value(self, coin: str) -> float:
+    def get_position_value(self, coin: str) -> float:
         """
         Get the current position value for a coin.
         
@@ -148,12 +146,12 @@ class PositionManager:
             Position value in base currency
         """
         try:
-            position = await self.get_position(coin)
+            position = self.get_position(coin)
             if not position:
                 return 0.0
                 
             # Get current market price
-            market_data = await self.info.all_mids()
+            market_data = self.info.all_mids()
             current_price = float(market_data[coin])
             
             return abs(position.size * current_price)
@@ -162,7 +160,7 @@ class PositionManager:
             logger.error(f"Error getting position value for {coin}: {str(e)}")
             raise
             
-    async def get_position_pnl(self, coin: str) -> Dict[str, float]:
+    def get_position_pnl(self, coin: str) -> Dict[str, float]:
         """
         Get the PnL for a position.
         
@@ -173,7 +171,7 @@ class PositionManager:
             Dict containing unrealized and realized PnL
         """
         try:
-            position = await self.get_position(coin)
+            position = self.get_position(coin)
             if not position:
                 return {"unrealized": 0.0, "realized": 0.0}
                 
@@ -186,7 +184,7 @@ class PositionManager:
             logger.error(f"Error getting PnL for {coin}: {str(e)}")
             raise
             
-    async def get_position_risk(self, coin: str) -> Dict[str, Optional[float]]:
+    def get_position_risk(self, coin: str) -> Dict[str, Optional[float]]:
         """
         Get risk metrics for a position.
         
@@ -197,7 +195,7 @@ class PositionManager:
             Dict containing risk metrics
         """
         try:
-            position = await self.get_position(coin)
+            position = self.get_position(coin)
             if not position:
                 return {
                     "liquidation_price": None,
@@ -215,7 +213,7 @@ class PositionManager:
             logger.error(f"Error getting risk metrics for {coin}: {str(e)}")
             raise
             
-    async def get_position_history(
+    def get_position_history(
         self,
         coin: Optional[str] = None,
         start_time: Optional[datetime] = None,

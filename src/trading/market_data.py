@@ -1,6 +1,6 @@
 import time
 from typing import Callable, Dict, Any, Optional, List, Tuple
-from src.config import settings
+from src.settings import settings
 from hyperliquid.info import Info
 from hyperliquid.utils.types import Subscription
 from loguru import logger

@@ -4,7 +4,7 @@ from datetime import datetime
 from src.trading.market_data import MarketDataStreamer
 from src.trading.connection import HyperliquidConnection
 from hyperliquid.utils.constants import MAINNET_API_URL
-from src.config import settings
+from src.settings import settings
 
 import logging
 
