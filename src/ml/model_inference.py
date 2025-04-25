@@ -38,31 +38,22 @@ class ModelInference:
             logger.error(f"Error loading model: {str(e)}")
             raise
 
-    def prepare_features(self, market_data: pd.DataFrame) -> pd.DataFrame:
+    def prepare_features(self, candles: List[Dict[str, Any]]) -> pd.DataFrame:
         """
         Prepare features for model inference.
 
         Args:
-            market_data: Raw market data DataFrame
+            candles: List of candles
 
         Returns:
             Processed features DataFrame
         """
         try:
-            # Clean and preprocess data
-            cleaned_data = self.preprocessor.clean_market_data(market_data)
+            preprocessed_candles = self.preprocessor.preprocess_candles(candles)
+            normalized_candles = self.preprocessor.normalize_candles(preprocessed_candles)
             
-            # Calculate technical indicators
-            indicators = self.preprocessor.calculate_technical_indicators(cleaned_data)
-            
-            # Create additional features
-            features = self.preprocessor.create_features(indicators)
-            
-            # Normalize features
-            normalized_features = self.preprocessor.normalize_features(features)
-            
-            logger.debug(f"Prepared features for inference: {len(normalized_features)} samples")
-            return normalized_features
+            logger.debug(f"Prepared features for inference: {len(normalized_candles)} samples")
+            return normalized_candles
         except Exception as e:
             logger.error(f"Error preparing features: {str(e)}")
             raise
@@ -80,11 +71,7 @@ class ModelInference:
         try:
             # Ensure all required features are present
             required_features = [
-                'sma_20', 'sma_50', 'ema_20', 'rsi', 'macd', 'signal',
-                'bb_middle', 'bb_upper', 'bb_lower', 'atr',
-                'price_change', 'price_change_1d', 'price_change_1w',
-                'volume_ma', 'volume_std', 'volume_change',
-                'volatility', 'price_ma_ratio'
+                'o', 'h', 'l', 'c', 'v', 't'
             ]
             
             missing_features = [f for f in required_features if f not in features.columns]
@@ -92,17 +79,17 @@ class ModelInference:
                 raise ValueError(f"Missing required features: {missing_features}")
 
             # Prepare input data
-            X = features[required_features].values
+            X = features[required_features]
             
             # Make prediction
             # TODO: Replace with actual model prediction
-            prediction = None  # Replace with actual prediction
+            prediction = X['c'].mean()  # Replace with actual prediction
             
             # Process prediction results
             result = {
                 'timestamp': datetime.now().isoformat(),
                 'prediction': prediction,
-                'confidence': None,  # Replace with actual confidence score
+                'confidence': prediction,  # Replace with actual confidence score
                 'features_used': required_features,
                 'raw_features': features.iloc[-1].to_dict()
             }

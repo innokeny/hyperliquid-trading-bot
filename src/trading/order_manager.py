@@ -2,7 +2,8 @@ from typing import Dict, Optional, Union, List, Literal
 from hyperliquid.exchange import Exchange
 from hyperliquid.info import Info
 from hyperliquid.utils.types import Side, Cloid
-from hyperliquid.utils.signing import OrderType, LimitOrderType, TriggerOrderType
+from hyperliquid.utils.signing import OrderType, LimitOrderType, TriggerOrderType, Tpsl
+from hyperliquid.utils.types import BuilderInfo
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,13 +23,13 @@ class OrderManager:
         self.info = info
         self.open_orders: Dict[str, Dict] = {}  # Track open orders by order ID
         
-    async def place_order(
+    def place_order(
         self,
         name: str,
         is_buy: bool,
         sz: float,
         limit_px: float,
-        order_type: Union[LimitOrderType, TriggerOrderType] = LimitOrderType(tif="Alo"),
+        order_type: OrderType = OrderType({'limit': LimitOrderType(tif="Alo")}),
         reduce_only: bool = False,
         cloid: Optional[Cloid] = None
     ) -> Dict:
@@ -68,15 +69,17 @@ class OrderManager:
             }
             
             # Place the order
-            response = await self.exchange.order(**order_params)
-            
-            if not response.get("success"):
+            response = self.exchange.order(**order_params)
+            if response.get("status", 'failed') != 'ok':
                 raise Exception(f"Failed to place order: {response.get('error')}")
             
             # Track the order if successful
-            if "order_id" in response:
-                self.open_orders[response["order_id"]] = order_params
-                logger.info(f"Order placed successfully: {response['order_id']}")
+            if "response" in response and "data" in response["response"]:
+                statuses = response["response"]["data"].get("statuses", [])
+                if statuses and "resting" in statuses[0]:
+                    oid = statuses[0]["resting"]["oid"]
+                    self.open_orders[str(oid)] = order_params
+                    logger.info(f"Order placed successfully: {oid}")
             
             return response
             
@@ -84,7 +87,7 @@ class OrderManager:
             logger.error(f"Error placing order: {str(e)}")
             raise
             
-    async def cancel_order(self, name: str, oid: int) -> Dict:
+    def cancel_order(self, name: str, oid: int) -> Dict:
         """
         Cancel an existing order.
         
@@ -96,9 +99,8 @@ class OrderManager:
             Dict containing the cancellation response
         """
         try:
-            response = await self.exchange.cancel(name, oid)
-            
-            if not response.get("success"):
+            response = self.exchange.cancel(name, oid)
+            if not response.get("status", 'failed') == 'ok':
                 raise Exception(f"Failed to cancel order: {response.get('error')}")
             
             # Remove from tracked orders if successful
@@ -112,14 +114,14 @@ class OrderManager:
             logger.error(f"Error cancelling order: {str(e)}")
             raise
             
-    async def modify_order(
+    def modify_order(
         self,
         oid: int,
         name: str,
         is_buy: bool,
         sz: float,
         limit_px: float,
-        order_type: Union[LimitOrderType, TriggerOrderType] = LimitOrderType(tif="Alo"),
+        order_type: OrderType = OrderType({'limit': LimitOrderType(tif="Alo")}),
         reduce_only: bool = False,
         cloid: Optional[Cloid] = None
     ) -> Dict:
@@ -155,13 +157,12 @@ class OrderManager:
                 "cloid": cloid
             }
             
-            response = await self.exchange.modify_order(**modify_params)
-            
-            if not response.get("success"):
+            response = self.exchange.modify_order(**modify_params)
+            if not response.get("status", 'failed') == 'ok':
                 raise Exception(f"Failed to modify order: {response.get('error')}")
             
             # Update tracked order if successful
-            if "order_id" in response:
+            if "oid" in response:
                 self.open_orders[str(oid)].update(modify_params)
                 logger.info(f"Order modified successfully: {oid}")
             
@@ -171,7 +172,7 @@ class OrderManager:
             logger.error(f"Error modifying order: {str(e)}")
             raise
             
-    async def get_open_orders(self, name: Optional[str] = None) -> List[Dict]:
+    def get_open_orders(self, name: Optional[str] = None) -> List[Dict]:
         """
         Get all open orders, optionally filtered by coin.
         
@@ -182,10 +183,13 @@ class OrderManager:
             List of open orders
         """
         try:
-            orders = await self.info.open_orders(self.exchange.wallet.address)
+            if not self.exchange.account_address:
+                raise ValueError("Exchange account address not set")
+                
+            orders = self.info.open_orders(self.exchange.account_address)
             
             if name:
-                orders = [order for order in orders if order["name"] == name]
+                orders = [order for order in orders if order["coin"] == name]
             
             return orders
             
@@ -193,7 +197,7 @@ class OrderManager:
             logger.error(f"Error getting open orders: {str(e)}")
             raise
             
-    async def cancel_all_orders(self, name: Optional[str] = None) -> Dict:
+    def cancel_all_orders(self, name: Optional[str] = None) -> Dict:
         """
         Cancel all open orders, optionally filtered by coin.
         
@@ -204,10 +208,10 @@ class OrderManager:
             Dict containing the cancellation response
         """
         try:
-            open_orders = await self.get_open_orders(name)
-            
-            for order in open_orders:
-                await self.cancel_order(order["name"], order["order_id"])
+            open_orders = self.get_open_orders(name)
+            if len(open_orders) > 0:
+                for order in open_orders:
+                    self.cancel_order(order["coin"], order["oid"])
             
             return {"success": True, "message": "All orders cancelled successfully"}
             
