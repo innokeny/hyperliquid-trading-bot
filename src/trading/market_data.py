@@ -1,5 +1,5 @@
 import time
-from typing import Callable, Dict, Any, Optional, List
+from typing import Callable, Dict, Any, Optional, List, Tuple
 from src.config import settings
 from hyperliquid.info import Info
 from hyperliquid.utils.types import Subscription
@@ -17,6 +17,7 @@ class MarketDataStreamer:
         """
         self.coin = coin
         self.info = info
+        self.subscriptions: Dict[str, Tuple[Subscription, int]] = {}
     
     def subscribe(self, event_type: str, candle_interval: Optional[str] = None, callback: Callable = logger.info) -> None:
         """Subscribe to a specific event type."""
@@ -29,12 +30,22 @@ class MarketDataStreamer:
             subscribe_message["interval"] = candle_interval # type: ignore
         
         try:
-            self.info.subscribe(subscribe_message, callback)
+            subscription_id = self.info.subscribe(subscribe_message, callback)
+            self.subscriptions[event_type] = (subscribe_message, subscription_id) # type: ignore
             logger.success(f"Subscribed to {event_type} for {self.coin}")
         except Exception as e:
             logger.error(f"Failed to subscribe to {event_type}: {e}")
             raise
     
+    def unsubscribe(self, event_type: str) -> None:
+        """Unsubscribe from a specific event type."""
+        try:
+            self.info.unsubscribe(self.subscriptions[event_type][0], self.subscriptions[event_type][1])
+            logger.success(f"Unsubscribed from {event_type} for {self.coin}")
+        except Exception as e:
+            logger.error(f"Failed to unsubscribe from {event_type}: {e}")
+            raise
+        
     def get_orderbook(self) -> Dict[str, Any]:
         """Get the current orderbook snapshot."""
         try:
