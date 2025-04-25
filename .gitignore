@@ -36,7 +36,6 @@ ENV/
 # Project specific
 logs/
 cache/
-data/
 models/
 *.log
 *.csv
