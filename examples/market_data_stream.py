@@ -20,7 +20,7 @@ def handle_trades(data: dict) -> None:
 
 def handle_candles(data: dict) -> None:
     """Handle candle updates."""
-    print("Received candles data")
+    print(f"Received candles data: {data}")
 
 
 def main():
