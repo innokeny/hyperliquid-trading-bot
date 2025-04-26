@@ -1,6 +1,6 @@
 import sys
 from hyperliquid.info import Info
-from hyperliquid.utils.constants import TESTNET_API_URL
+from hyperliquid.utils.constants import TESTNET_API_URL, MAINNET_API_URL
 import pandas as pd
 import argparse
 from datetime import datetime, timedelta
@@ -50,8 +50,9 @@ def fetch_candles_df(token: str, interval: str = '1h', info: Info = Info(TESTNET
     }, inplace=True)
     return df
 
-def main(token: str, interval: str, output: str):
-    df = fetch_candles_df(token, interval)
+def main(token: str, interval: str, output: str, testnet: bool):
+    info = Info(TESTNET_API_URL) if testnet else Info(MAINNET_API_URL)
+    df = fetch_candles_df(token, interval, info)
     df.to_csv(output, index=False)
 
 if __name__ == "__main__":
@@ -59,5 +60,6 @@ if __name__ == "__main__":
     parser.add_argument("--token", type=str, required=True)
     parser.add_argument("--interval", type=str, required=True)
     parser.add_argument("--output", type=str, required=True)
+    parser.add_argument("--testnet", action="store_true", default=False)
     args = parser.parse_args()
-    main(args.token, args.interval, args.output)
+    main(args.token, args.interval, args.output, args.testnet)
