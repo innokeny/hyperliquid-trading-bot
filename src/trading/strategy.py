@@ -25,11 +25,122 @@ class TradingStrategy:
         self.trailing_stop_price = None
         self.highest_price = None
         self.lowest_price = None
+        self.donchian_channels = {}  # Store Donchian channels for different timeframes
         logger.info("Initialized trading strategy")
+
+    def _calculate_donchian_channels(self, data: pd.DataFrame, timeframe: int) -> pd.DataFrame:
+        """Calculate Donchian channels for a given timeframe."""
+        try:
+            high = data['high'].rolling(window=timeframe).max()
+            low = data['low'].rolling(window=timeframe).min()
+            middle = (high + low) / 2
+            
+            return pd.DataFrame({
+                f'DCU_{timeframe}': high,
+                f'DCM_{timeframe}': middle,
+                f'DCL_{timeframe}': low
+            })
+        except Exception as e:
+            logger.error(f"Error calculating Donchian channels: {str(e)}")
+            raise
+
+    def _generate_ml_enhanced_signals(self, market_data: Dict[str, Any], timeframe: int) -> Dict[str, Any]:
+        """Generate trading signals using ML model and Donchian channels."""
+        try:
+            # Convert market data to DataFrame for technical analysis
+            df = pd.DataFrame([market_data])
+            
+            # Calculate Donchian channels
+            donchian = self._calculate_donchian_channels(df, timeframe)
+            current_dcu = donchian[f'DCU_{timeframe}'].iloc[-1]
+            current_dcm = donchian[f'DCM_{timeframe}'].iloc[-1]
+            
+            # Get ML model prediction
+            features = self.model_inference.prepare_features([market_data])
+            prediction = self.model_inference.make_prediction(features)
+            
+            # Initialize signal
+            signal = {
+                'timestamp': datetime.now().isoformat(),
+                'signal': 'HOLD',
+                'confidence': prediction['confidence'],
+                'current_price': market_data['c'],
+                'stop_loss': None,
+                'take_profit': None,
+                'trailing_stop': None,
+                'position_size': 0.0,
+                'ml_prediction': prediction['prediction'],
+                'ml_confidence': prediction['confidence']
+            }
+            
+            # Check for entry conditions
+            if self.current_position is None:
+                # Entry condition: Price above upper channel and ML prediction positive
+                if (market_data['c'] >= current_dcu and 
+                    prediction['prediction'] > 0 and 
+                    prediction['confidence'] >= self.config['ml_confidence_threshold']):
+                    signal['signal'] = 'BUY'
+                    signal['stop_loss'] = current_dcm
+                    signal['take_profit'] = market_data['c'] + (market_data['c'] - current_dcm) * 2
+                    signal['position_size'] = self._calculate_position_size(market_data, prediction['confidence'])
+            
+            # Check for exit conditions
+            elif self.current_position is not None:
+                # Exit condition: Price below middle channel or ML prediction negative
+                if (market_data['c'] <= current_dcm or 
+                    (prediction['prediction'] < 0 and 
+                     prediction['confidence'] >= self.config['ml_confidence_threshold'])):
+                    signal['signal'] = 'SELL'
+                    signal['position_size'] = self.current_position['size']
+            
+            # Update trailing stop
+            if self.current_position is not None:
+                if self.current_position['side'] == 'LONG':
+                    if self.highest_price is None or market_data['c'] > self.highest_price:
+                        self.highest_price = market_data['c']
+                        self.trailing_stop_price = self.highest_price * (1 - self.config['trailing_stop_percentage'])
+                    signal['trailing_stop'] = self.trailing_stop_price
+                else:
+                    if self.lowest_price is None or market_data['c'] < self.lowest_price:
+                        self.lowest_price = market_data['c']
+                        self.trailing_stop_price = self.lowest_price * (1 + self.config['trailing_stop_percentage'])
+                    signal['trailing_stop'] = self.trailing_stop_price
+            
+            return signal
+        except Exception as e:
+            logger.error(f"Error generating ML-enhanced signals: {str(e)}")
+            raise
+
+    def _calculate_position_size(self, market_data: Dict[str, Any], confidence: float) -> float:
+        """Calculate position size based on risk parameters and ML confidence."""
+        try:
+            # Get available capital
+            available_capital = market_data.get('available_capital', 0)
+            
+            # Base position size
+            base_size = available_capital * self.config['max_position_size']
+            
+            # Adjust for ML confidence
+            confidence_factor = confidence / self.config['ml_confidence_threshold']
+            position_size = base_size * confidence_factor
+            
+            # Adjust for volatility
+            volatility = market_data.get('volatility', 0)
+            volatility_factor = 1 - (volatility / self.config['max_volatility'])
+            position_size = position_size * volatility_factor
+            
+            # Ensure position size is within limits
+            position_size = min(position_size, available_capital)
+            position_size = max(position_size, 0)
+            
+            return position_size
+        except Exception as e:
+            logger.error(f"Error calculating position size: {str(e)}")
+            return 0.0
 
     def generate_signals(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Generate trading signals based on market data and model predictions.
+        Generate trading signals based on market data and ML predictions.
 
         Args:
             market_data: Dictionary containing current market data
@@ -38,30 +149,75 @@ class TradingStrategy:
             Dictionary containing trading signals and metadata
         """
         try:
-            # Convert market data to list of candles format
-            candles = self._prepare_market_data(market_data)
+            # Generate signals for each timeframe
+            signals = {}
+            for timeframe in self.config['timeframes']:
+                signals[timeframe] = self._generate_ml_enhanced_signals(market_data, timeframe)
             
-            # Get model prediction
-            features = self.model_inference.prepare_features(candles)
-            prediction = self.model_inference.make_prediction(features)
+            # Combine signals from different timeframes
+            combined_signal = self._combine_timeframe_signals(signals)
             
-            # Process prediction into trading signal
-            signal = self._process_signal(prediction, market_data)
+            # Apply risk management
+            combined_signal = self._apply_risk_management(combined_signal, market_data)
             
-            # Apply risk management rules
-            signal = self._apply_risk_management(signal, market_data)
-            
-            # Calculate position size
-            signal = self._calculate_position_size(signal, market_data)
-            
-            # Generate entry/exit signals
-            signal = self._generate_entry_exit_signals(signal, market_data)
-            
-            logger.debug(f"Generated trading signal: {signal['signal']}")
-            return signal
+            logger.debug(f"Generated trading signal: {combined_signal['signal']}")
+            return combined_signal
             
         except Exception as e:
             logger.error(f"Error generating signals: {str(e)}")
+            raise
+
+    def _combine_timeframe_signals(self, signals: Dict[int, Dict[str, Any]]) -> Dict[str, Any]:
+        """Combine signals from different timeframes."""
+        try:
+            # Initialize combined signal
+            combined_signal = {
+                'timestamp': datetime.now().isoformat(),
+                'signal': 'HOLD',
+                'confidence': 0.0,
+                'current_price': None,
+                'stop_loss': None,
+                'take_profit': None,
+                'trailing_stop': None,
+                'position_size': 0.0,
+                'timeframe_signals': signals
+            }
+            
+            # Count signals for each direction
+            buy_count = sum(1 for s in signals.values() if s['signal'] == 'BUY')
+            sell_count = sum(1 for s in signals.values() if s['signal'] == 'SELL')
+            
+            # Determine final signal based on majority
+            if buy_count > sell_count:
+                combined_signal['signal'] = 'BUY'
+                # Use the most confident buy signal's parameters
+                buy_signals = [s for s in signals.values() if s['signal'] == 'BUY']
+                if buy_signals:
+                    best_signal = max(buy_signals, key=lambda x: x['confidence'])
+                    combined_signal.update({
+                        'confidence': best_signal['confidence'],
+                        'current_price': best_signal['current_price'],
+                        'stop_loss': best_signal['stop_loss'],
+                        'take_profit': best_signal['take_profit'],
+                        'position_size': best_signal['position_size']
+                    })
+            elif sell_count > buy_count:
+                combined_signal['signal'] = 'SELL'
+                # Use the most confident sell signal's parameters
+                sell_signals = [s for s in signals.values() if s['signal'] == 'SELL']
+                if sell_signals:
+                    best_signal = max(sell_signals, key=lambda x: x['confidence'])
+                    combined_signal.update({
+                        'confidence': best_signal['confidence'],
+                        'current_price': best_signal['current_price'],
+                        'stop_loss': best_signal['stop_loss'],
+                        'take_profit': best_signal['take_profit'],
+                        'position_size': best_signal['position_size']
+                    })
+            
+            return combined_signal
+        except Exception as e:
+            logger.error(f"Error combining timeframe signals: {str(e)}")
             raise
 
     def _generate_entry_exit_signals(self, signal: Dict[str, Any], market_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -380,38 +536,6 @@ class TradingStrategy:
             return signal
         except Exception as e:
             logger.error(f"Error applying risk management: {str(e)}")
-            raise
-
-    def _calculate_position_size(self, signal: Dict[str, Any], market_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Calculate position size based on risk parameters and market conditions."""
-        try:
-            if signal['signal'] == "HOLD":
-                signal['position_size'] = 0
-                return signal
-
-            # Get available capital
-            available_capital = market_data.get('available_capital', 0)
-            
-            # Calculate base position size
-            base_size = available_capital * self.config['max_position_size']
-            
-            # Adjust position size based on confidence
-            confidence_factor = signal['confidence'] / self.config['prediction_threshold']
-            position_size = base_size * confidence_factor
-            
-            # Adjust for volatility
-            volatility = market_data.get('volatility', 0)
-            volatility_factor = 1 - (volatility / self.config['max_volatility'])
-            position_size = position_size * volatility_factor
-            
-            # Ensure position size is within limits
-            position_size = min(position_size, available_capital)
-            position_size = max(position_size, 0)
-            
-            signal['position_size'] = position_size
-            return signal
-        except Exception as e:
-            logger.error(f"Error calculating position size: {str(e)}")
             raise
 
     def update_position(self, position: Dict[str, Any]):

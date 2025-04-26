@@ -1,4 +1,5 @@
 """Data package for the trading bot."""
 from .preprocessing import DataPreprocessor
- 
-__all__ = ['DataPreprocessor'] 
+from .market_data import MarketDataCollector
+
+__all__ = ['DataPreprocessor', 'MarketDataCollector'] 

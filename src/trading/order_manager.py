@@ -21,7 +21,7 @@ class OrderManager:
         """
         self.exchange = exchange
         self.info = info
-        self.open_orders: Dict[str, Dict] = {}  # Track open orders by order ID
+        self.open_orders: Dict[str, Dict] = {}
         
     def place_order(
         self,
@@ -49,15 +49,12 @@ class OrderManager:
             Dict containing the order response
         """
         try:
-            # Validate order parameters
             if not name or sz <= 0:
                 raise ValueError("Invalid order parameters")
             
-            # For limit orders, price is required
             if hasattr(order_type, "tif") and limit_px <= 0:
                 raise ValueError("Price is required for limit orders")
             
-            # Prepare order parameters
             order_params = {
                 "name": name,
                 "is_buy": is_buy,
@@ -68,12 +65,10 @@ class OrderManager:
                 "cloid": cloid
             }
             
-            # Place the order
             response = self.exchange.order(**order_params)
             if response.get("status", 'failed') != 'ok':
                 raise Exception(f"Failed to place order: {response.get('error')}")
             
-            # Track the order if successful
             if "response" in response and "data" in response["response"]:
                 statuses = response["response"]["data"].get("statuses", [])
                 if statuses and "resting" in statuses[0]:
@@ -103,7 +98,6 @@ class OrderManager:
             if not response.get("status", 'failed') == 'ok':
                 raise Exception(f"Failed to cancel order: {response.get('error')}")
             
-            # Remove from tracked orders if successful
             if str(oid) in self.open_orders:
                 del self.open_orders[str(oid)]
                 logger.info(f"Order cancelled successfully: {oid}")
@@ -145,7 +139,6 @@ class OrderManager:
             if str(oid) not in self.open_orders:
                 raise ValueError(f"Order {oid} not found")
             
-            # Prepare modification parameters
             modify_params = {
                 "oid": oid,
                 "name": name,
@@ -161,7 +154,6 @@ class OrderManager:
             if not response.get("status", 'failed') == 'ok':
                 raise Exception(f"Failed to modify order: {response.get('error')}")
             
-            # Update tracked order if successful
             if "oid" in response:
                 self.open_orders[str(oid)].update(modify_params)
                 logger.info(f"Order modified successfully: {oid}")

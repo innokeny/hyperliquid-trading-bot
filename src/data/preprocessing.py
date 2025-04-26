@@ -5,6 +5,7 @@ from datetime import datetime
 import logging
 import pandas_ta as ta
 
+
 logger = logging.getLogger(__name__)
 
 FEATURE_COLS = [

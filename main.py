@@ -1,51 +1,158 @@
 import asyncio
-import json
+import time
 from datetime import datetime
+from typing import Dict, Any, Optional, Tuple
+from loguru import logger
+from hyperliquid.utils.constants import MAINNET_API_URL
+from hyperliquid.exchange import Exchange
+from hyperliquid.info import Info
+
+from src.trading.connection import HyperliquidConnection
 from src.trading.market_data import MarketDataStreamer
+from src.data.market_data import MarketDataCollector
+from src.ml.model_inference import ModelInference
+from src.trading.strategy import TradingStrategy
+from src.trading.order_manager import OrderManager
 from src.settings import settings
 
-async def handle_orderbook(data: dict) -> None:
-    """Handle orderbook updates."""
-    if "data" in data:
-        orderbook = data["data"]
-        print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Orderbook Update:")
-        print(f"Bids: {orderbook.get('bids', [])[:5]}")  # Show top 5 bids
-        print(f"Asks: {orderbook.get('asks', [])[:5]}")  # Show top 5 asks
-
-async def handle_trades(data: dict) -> None:
-    """Handle trade updates."""
-    if "data" in data:
-        trades = data["data"]
-        for trade in trades:
-            print(f"\n[{datetime.now().strftime('%H:%M:%S')}] New Trade:")
-            print(f"Price: {trade.get('px')}")
-            print(f"Size: {trade.get('sz')}")
-            print(f"Side: {trade.get('side')}")
+class TradingBot:
+    """Main trading bot class that integrates all components."""
+    
+    def __init__(self):
+        """Initialize the trading bot with all required components."""
+        # Initialize connection
+        self.connection = HyperliquidConnection()
+        self.connection.setup(base_url=MAINNET_API_URL)
+        self.info, self.exchange = self.connection.get_connection()
+        
+        # Initialize components
+        self.streamer = MarketDataStreamer(self.info)
+        self.collector = MarketDataCollector(self.streamer, candle_interval="1m", max_candles=1000)
+        self.model_inference = ModelInference(str(settings.MODEL_PATH))
+        self.strategy = TradingStrategy(self.model_inference)
+        self.order_manager = OrderManager(self.exchange, self.info)
+        
+        logger.info("Trading bot initialized successfully")
+    
+    async def start(self):
+        """Start the trading bot."""
+        try:
+            # Start market data collection
+            self.collector.start()
+            logger.info("Started market data collection")
+            
+            while True:
+                # Get latest market data
+                latest_candle = self.collector.get_latest_candle()
+                if not latest_candle:
+                    await asyncio.sleep(1)
+                    continue
+                
+                # Generate trading signals
+                signal = self.strategy.generate_signals(latest_candle)
+                
+                # Process signal and execute orders
+                if signal['signal'] != 'HOLD':
+                    await self._process_signal(signal)
+                
+                # Check for stop conditions on existing positions
+                if self.strategy.current_position is not None:
+                    await self._check_stop_conditions(latest_candle)
+                
+                # Sleep to control loop frequency
+                await asyncio.sleep(1)
+                
+        except KeyboardInterrupt:
+            logger.info("Received shutdown signal")
+        except Exception as e:
+            logger.error(f"Error in main loop: {str(e)}")
+        finally:
+            self.stop()
+    
+    async def _process_signal(self, signal: Dict[str, Any]):
+        """Process trading signal and execute orders."""
+        try:
+            if signal['signal'] == 'BUY' and self.strategy.current_position is None:
+                # Place buy order
+                order = self.order_manager.place_order(
+                    name=settings.COIN,
+                    is_buy=True,
+                    sz=signal['position_size'],
+                    limit_px=signal['current_price']
+                )
+                
+                if order.get('status') == 'ok':
+                    position: Dict[str, Any] = {
+                        'side': 'LONG',
+                        'entry_price': signal['current_price'],
+                        'stop_loss': signal['stop_loss'],
+                        'take_profit': signal['take_profit'],
+                        'size': signal['position_size']
+                    }
+                    self.strategy.update_position(position)
+                    logger.info(f"Opened LONG position: {position}")
+            
+            elif signal['signal'] == 'SELL' and self.strategy.current_position is not None:
+                # Place sell order
+                order = self.order_manager.place_order(
+                    name=settings.COIN,
+                    is_buy=False,
+                    sz=self.strategy.current_position['size'],
+                    limit_px=signal['current_price']
+                )
+                
+                if order.get('status') == 'ok':
+                    logger.info(f"Closed position: {self.strategy.current_position}")
+                    self.strategy.update_position({})  # Empty dict to clear position
+        
+        except Exception as e:
+            logger.error(f"Error processing signal: {str(e)}")
+    
+    async def _check_stop_conditions(self, market_data: Dict[str, Any]):
+        """Check if stop conditions are met for existing positions."""
+        try:
+            if self.strategy.current_position is None:
+                return
+                
+            current_price = market_data['c']
+            position = self.strategy.current_position
+            
+            if position['side'] == 'LONG':
+                # Check stop loss
+                if current_price <= position['stop_loss']:
+                    await self._process_signal({'signal': 'SELL', 'current_price': current_price})
+                    logger.info("Stop loss triggered")
+                
+                # Check take profit
+                elif current_price >= position['take_profit']:
+                    await self._process_signal({'signal': 'SELL', 'current_price': current_price})
+                    logger.info("Take profit reached")
+                
+                # Check trailing stop
+                elif self.strategy.trailing_stop_price is not None and current_price <= self.strategy.trailing_stop_price:
+                    await self._process_signal({'signal': 'SELL', 'current_price': current_price})
+                    logger.info("Trailing stop triggered")
+        
+        except Exception as e:
+            logger.error(f"Error checking stop conditions: {str(e)}")
+    
+    def stop(self):
+        """Stop the trading bot and clean up resources."""
+        try:
+            self.collector.stop()
+            logger.info("Stopped market data collection")
+            
+            # Cancel all open orders
+            self.order_manager.cancel_all_orders(settings.COIN)
+            logger.info("Cancelled all open orders")
+            
+        except Exception as e:
+            logger.error(f"Error during shutdown: {str(e)}")
 
 async def main():
-    """Main function to demonstrate market data streaming."""
-    # Initialize the market data streamer
-    streamer = MarketDataStreamer()
-    
-    # Register callbacks for different event types
-    streamer.register_callback("l2Book", handle_orderbook)
-    streamer.register_callback("trades", handle_trades)
-    
-    try:
-        print("Starting market data stream...")
-        print(f"Trading pair: {streamer.trading_pair}")
-        print("Press Ctrl+C to stop")
-        
-        # Start the stream
-        await streamer.start()
-        
-    except KeyboardInterrupt:
-        print("\nStopping market data stream...")
-        await streamer.stop()
-    except Exception as e:
-        print(f"Error: {e}")
-        await streamer.stop()
+    """Main function to run the trading bot."""
+    bot = TradingBot()
+    await bot.start()
 
 if __name__ == "__main__":
-    # Run the main function
     asyncio.run(main()) 

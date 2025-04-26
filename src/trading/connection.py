@@ -30,7 +30,6 @@ class HyperliquidConnection:
             Tuple containing (address, info, exchange)
         """
         try:
-            # Initialize account from secret key
             self.account = Account.from_key(settings.HYPERLIQUID_SECRET_KEY)
             self.address = settings.HYPERLIQUID_ACCOUNT_ADDRESS
             

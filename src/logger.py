@@ -5,7 +5,7 @@ from loguru import logger
 log_dir = Path("logs")
 log_dir.mkdir(exist_ok=True)
 
-logger.remove()  # Remove default handler
+logger.remove()
 
 logger.add(
     sys.stderr,

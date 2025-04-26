@@ -1,10 +1,11 @@
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any, Tuple, Union
 import logging
 import numpy as np
 import pandas as pd
 from datetime import datetime
 from ..data.preprocessing import DataPreprocessor
-
+import lightgbm as lgb
+from scipy.sparse import spmatrix, csr_matrix
 logger = logging.getLogger(__name__)
 
 class ModelInference:
@@ -22,20 +23,20 @@ class ModelInference:
         self.preprocessor = DataPreprocessor()
         logger.info(f"Initialized model inference with model at {model_path}")
 
-    def _load_model(self) -> Any:
+    def _load_model(self) -> lgb.Booster:
         """
-        Load the trained model from disk.
+        Load the trained LightGBM model from disk.
 
         Returns:
-            Loaded model object
+            Loaded LightGBM model
         """
         try:
-            # TODO: Implement model loading based on the actual model type
-            # This is a placeholder that should be replaced with actual model loading code
-            logger.info(f"Loading model from {self.model_path}")
-            return None  # Replace with actual model loading
+            logger.info(f"Loading LightGBM model from {self.model_path}")
+            model = lgb.Booster(model_file=self.model_path)
+            logger.info("Successfully loaded LightGBM model")
+            return model
         except Exception as e:
-            logger.error(f"Error loading model: {str(e)}")
+            logger.error(f"Error loading LightGBM model: {str(e)}")
             raise
 
     def prepare_features(self, candles: List[Dict[str, Any]]) -> pd.DataFrame:
@@ -60,7 +61,7 @@ class ModelInference:
 
     def make_prediction(self, features: pd.DataFrame) -> Dict[str, Any]:
         """
-        Make predictions using the loaded model.
+        Make predictions using the loaded LightGBM model.
 
         Args:
             features: Processed features DataFrame
@@ -69,7 +70,6 @@ class ModelInference:
             Dictionary containing prediction results
         """
         try:
-            # Ensure all required features are present
             required_features = [
                 'o', 'h', 'l', 'c', 'v', 't'
             ]
@@ -78,18 +78,29 @@ class ModelInference:
             if missing_features:
                 raise ValueError(f"Missing required features: {missing_features}")
 
-            # Prepare input data
-            X = features[required_features]
+            X = features[required_features].values
             
-            # Make prediction
-            # TODO: Replace with actual model prediction
-            prediction = X['c'].mean()  # Replace with actual prediction
+            raw_prediction = self.model.predict(X)
             
-            # Process prediction results
+            if isinstance(raw_prediction, np.ndarray):
+                prediction = float(raw_prediction[-1])
+                confidence = float(np.abs(raw_prediction[-1]))
+            elif isinstance(raw_prediction, (spmatrix, csr_matrix)):
+                dense_pred = np.asarray(raw_prediction)
+                prediction = float(dense_pred[-1])
+                confidence = float(np.abs(dense_pred[-1]))
+            else:
+                try:
+                    prediction = float(raw_prediction)
+                    confidence = float(np.abs(raw_prediction))
+                except (TypeError, ValueError) as e:
+                    logger.error(f"Failed to convert prediction to float: {str(e)}")
+                    raise ValueError("Invalid prediction output format")
+            
             result = {
                 'timestamp': datetime.now().isoformat(),
                 'prediction': prediction,
-                'confidence': prediction,  # Replace with actual confidence score
+                'confidence': confidence,
                 'features_used': required_features,
                 'raw_features': features.iloc[-1].to_dict()
             }
@@ -111,18 +122,26 @@ class ModelInference:
             Processed trading signals
         """
         try:
-            # TODO: Implement prediction processing logic
-            # This should convert model predictions into actionable trading signals
+            signal = 'BUY' if prediction['prediction'] > 0 else 'SELL'
+            
+            confidence = prediction['confidence']
+            current_price = prediction['raw_features']['c']
+            
+            stop_loss = current_price * (1 - 0.02) if signal == 'BUY' else current_price * (1 + 0.02)
+            take_profit = current_price * (1 + 0.04) if signal == 'BUY' else current_price * (1 - 0.04)
+            
+            position_size = min(1.0, confidence)
+            
             processed_signal = {
                 'timestamp': prediction['timestamp'],
-                'signal': None,  # Replace with actual signal (e.g., 'BUY', 'SELL', 'HOLD')
+                'signal': signal,
                 'confidence': prediction['confidence'],
-                'price_target': None,  # Replace with actual price target
-                'stop_loss': None,  # Replace with actual stop loss
-                'take_profit': None,  # Replace with actual take profit
-                'position_size': None,  # Replace with actual position size
+                'price_target': take_profit,
+                'stop_loss': stop_loss,
+                'take_profit': take_profit,
+                'position_size': position_size,
                 'metadata': {
-                    'model_version': '1.0',  # Replace with actual version
+                    'model_version': '1.0',
                     'prediction_time': prediction['timestamp'],
                     'raw_prediction': prediction['prediction']
                 }

@@ -30,38 +30,13 @@ class MarketDataCollector:
         self.trades: List[Dict[str, Any]] = []
         self.orderbook: Optional[Dict[str, Any]] = None
         
-        # Subscribe to market data streams
     def start(self) -> None:
         """Start the market data collector."""        
-        # TODO: subscribe to all streams
-        # self.streamer.subscribe("l2Book", callback=self.handle_orderbook)
-        # self.streamer.subscribe("trades", callback=self.handle_trades)
         self.streamer.subscribe("candle", candle_interval=self.candle_interval, callback=self.handle_candles)
 
     def stop(self) -> None:
         """Stop the market data collector."""
-        # TODO: unsubscribe from all streams
         self.streamer.unsubscribe("candle")
-
-    def handle_orderbook(self, data: Dict[str, Any]) -> None:
-        """Handle incoming orderbook updates."""
-        try:
-            self.orderbook = data
-            timestamp = datetime.now()
-            logger.debug(f"Updated orderbook at {timestamp}")
-        except Exception as e:
-            logger.error(f"Error handling orderbook: {str(e)}")
-
-    def handle_trades(self, data: Dict[str, Any]) -> None:
-        """Handle incoming trade updates."""
-        try:
-            trades = data.get("trades", [])
-            self.trades.extend(trades)
-            
-            timestamp = datetime.now()
-            logger.debug(f"Added {len(trades)} new trades at {timestamp}")
-        except Exception as e:
-            logger.error(f"Error handling trades: {str(e)}")
 
     def merge_candle(self, data: Dict[str, Any]) -> None:
         """Merge new candle data with existing candles."""
