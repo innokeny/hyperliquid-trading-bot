@@ -1,0 +1,211 @@
+Loading data from data/1d_timeframe/binance/binance_ETH_USDT_1d_20150427_20250427.csv
+Data split: 1583 rows for training (80%)
+
+Training model for timeframe 5 days...
+
+--- Training ML Model for Timeframe 5 ---
+Total signal events for ML (5d): 261
+Train samples: 208, Validation samples: 53
+Performing feature selection...
+Dropped due to high correlation: ['donchian_width_rel_60']
+Features remaining after correlation filter: 16
+Dropped due to low mutual information: ['mom_10d', 'stochk_14_3_3', 'stochd_14_3_3', 'minus_di_14', 'ema_20_ratio']
+Final selected features: 11
+Calculated scale_pos_weight: 1.48
+Starting hyperparameter tuning with Optuna...
+Optuna best AUC: 0.7829
+Optuna best params: {'n_estimators': 800, 'learning_rate': 0.06794643636041776, 'num_leaves': 95, 'max_depth': 10, 'reg_alpha': 0.6139059512644653, 'reg_lambda': 0.6351055739973722, 'colsample_bytree': 0.6253448827637996, 'subsample': 0.7564857000537075, 'min_child_samples': 8}
+Training final LightGBM model with best parameters...
+Evaluating on validation set to find threshold...
+Optimal threshold (Max F1 on Valid) found: 0.3863
+Validation F1 @ optimal threshold: 0.6582
+Validation Precision @ optimal threshold: 0.4906
+Validation Recall @ optimal threshold: 1.0000
+Model saved to models/model_5d.joblib
+--- ML Model Training Complete ---
+
+Training model for timeframe 10 days...
+
+--- Training ML Model for Timeframe 10 ---
+Total signal events for ML (10d): 261
+Train samples: 208, Validation samples: 53
+Performing feature selection...
+Dropped due to high correlation: ['donchian_width_rel_60']
+Features remaining after correlation filter: 16
+Dropped due to low mutual information: ['mom_10d', 'stochk_14_3_3', 'stochd_14_3_3', 'minus_di_14', 'ema_20_ratio']
+Final selected features: 11
+Calculated scale_pos_weight: 1.48
+Starting hyperparameter tuning with Optuna...
+Optuna best AUC: 0.7751
+Optuna best params: {'n_estimators': 100, 'learning_rate': 0.08448362037200773, 'num_leaves': 39, 'max_depth': 10, 'reg_alpha': 7.53320520039879e-06, 'reg_lambda': 8.416618044822106e-06, 'colsample_bytree': 0.6361777080288403, 'subsample': 0.972189373920057, 'min_child_samples': 8}
+Training final LightGBM model with best parameters...
+Evaluating on validation set to find threshold...
+Optimal threshold (Max F1 on Valid) found: 0.1077
+Validation F1 @ optimal threshold: 0.7027
+Validation Precision @ optimal threshold: 0.5417
+Validation Recall @ optimal threshold: 1.0000
+Model saved to models/model_10d.joblib
+--- ML Model Training Complete ---
+
+Training model for timeframe 20 days...
+
+--- Training ML Model for Timeframe 20 ---
+Total signal events for ML (20d): 261
+Train samples: 208, Validation samples: 53
+Performing feature selection...
+Dropped due to high correlation: ['donchian_width_rel_60']
+Features remaining after correlation filter: 16
+Dropped due to low mutual information: ['mom_10d', 'stochk_14_3_3', 'stochd_14_3_3', 'minus_di_14', 'ema_20_ratio']
+Final selected features: 11
+Calculated scale_pos_weight: 1.48
+Starting hyperparameter tuning with Optuna...
+Optuna best AUC: 0.7837
+Optuna best params: {'n_estimators': 800, 'learning_rate': 0.086823705071808, 'num_leaves': 43, 'max_depth': 10, 'reg_alpha': 5.242521962335099e-07, 'reg_lambda': 1.5035209884512454e-08, 'colsample_bytree': 0.6208165387042295, 'subsample': 0.866439845480833, 'min_child_samples': 7}
+Training final LightGBM model with best parameters...
+Evaluating on validation set to find threshold...
+Optimal threshold (Max F1 on Valid) found: 0.3693
+Validation F1 @ optimal threshold: 0.6582
+Validation Precision @ optimal threshold: 0.4906
+Validation Recall @ optimal threshold: 1.0000
+Model saved to models/model_20d.joblib
+--- ML Model Training Complete ---
+
+Training model for timeframe 30 days...
+
+--- Training ML Model for Timeframe 30 ---
+Total signal events for ML (30d): 261
+Train samples: 208, Validation samples: 53
+Performing feature selection...
+Dropped due to high correlation: ['donchian_width_rel_60']
+Features remaining after correlation filter: 16
+Dropped due to low mutual information: ['mom_10d', 'stochk_14_3_3', 'stochd_14_3_3', 'minus_di_14', 'ema_20_ratio']
+Final selected features: 11
+Calculated scale_pos_weight: 1.48
+Starting hyperparameter tuning with Optuna...
+Optuna best AUC: 0.8003
+Optuna best params: {'n_estimators': 900, 'learning_rate': 0.09461366223461244, 'num_leaves': 89, 'max_depth': 6, 'reg_alpha': 0.209201687185526, 'reg_lambda': 1.3517952005708184e-07, 'colsample_bytree': 0.680726395575763, 'subsample': 0.6971795162371556, 'min_child_samples': 5}
+Training final LightGBM model with best parameters...
+Evaluating on validation set to find threshold...
+Optimal threshold (Max F1 on Valid) found: 0.2749
+Validation F1 @ optimal threshold: 0.6933
+Validation Precision @ optimal threshold: 0.5306
+Validation Recall @ optimal threshold: 1.0000
+Model saved to models/model_30d.joblib
+--- ML Model Training Complete ---
+
+Training model for timeframe 60 days...
+
+--- Training ML Model for Timeframe 60 ---
+Total signal events for ML (60d): 261
+Train samples: 208, Validation samples: 53
+Performing feature selection...
+Dropped due to high correlation: ['donchian_width_rel_60']
+Features remaining after correlation filter: 16
+Dropped due to low mutual information: ['mom_10d', 'stochk_14_3_3', 'stochd_14_3_3', 'minus_di_14', 'ema_20_ratio']
+Final selected features: 11
+Calculated scale_pos_weight: 1.48
+Starting hyperparameter tuning with Optuna...
+Optuna best AUC: 0.7633
+Optuna best params: {'n_estimators': 1000, 'learning_rate': 0.05106313874330284, 'num_leaves': 49, 'max_depth': 5, 'reg_alpha': 9.327955419518345e-08, 'reg_lambda': 1.8989565228967877e-06, 'colsample_bytree': 0.6289720699361648, 'subsample': 0.9595126283271347, 'min_child_samples': 8}
+Training final LightGBM model with best parameters...
+Evaluating on validation set to find threshold...
+Optimal threshold (Max F1 on Valid) found: 0.3834
+Validation F1 @ optimal threshold: 0.6582
+Validation Precision @ optimal threshold: 0.4906
+Validation Recall @ optimal threshold: 1.0000
+Model saved to models/model_60d.joblib
+--- ML Model Training Complete ---
+
+Training model for timeframe 90 days...
+
+--- Training ML Model for Timeframe 90 ---
+Total signal events for ML (90d): 261
+Train samples: 208, Validation samples: 53
+Performing feature selection...
+Dropped due to high correlation: ['donchian_width_rel_60']
+Features remaining after correlation filter: 16
+Dropped due to low mutual information: ['mom_10d', 'stochk_14_3_3', 'stochd_14_3_3', 'minus_di_14', 'ema_20_ratio']
+Final selected features: 11
+Calculated scale_pos_weight: 1.48
+Starting hyperparameter tuning with Optuna...
+Optuna best AUC: 0.7770
+Optuna best params: {'n_estimators': 500, 'learning_rate': 0.09392549054199172, 'num_leaves': 71, 'max_depth': 5, 'reg_alpha': 1.2640548532359486e-05, 'reg_lambda': 0.3631008579473968, 'colsample_bytree': 0.6564332530127127, 'subsample': 0.6665286000657634, 'min_child_samples': 8}
+Training final LightGBM model with best parameters...
+Evaluating on validation set to find threshold...
+Optimal threshold (Max F1 on Valid) found: 0.3718
+Validation F1 @ optimal threshold: 0.6582
+Validation Precision @ optimal threshold: 0.4906
+Validation Recall @ optimal threshold: 1.0000
+Model saved to models/model_90d.joblib
+--- ML Model Training Complete ---
+
+Training model for timeframe 150 days...
+
+--- Training ML Model for Timeframe 150 ---
+Total signal events for ML (150d): 261
+Train samples: 208, Validation samples: 53
+Performing feature selection...
+Dropped due to high correlation: ['donchian_width_rel_60']
+Features remaining after correlation filter: 16
+Dropped due to low mutual information: ['mom_10d', 'stochk_14_3_3', 'stochd_14_3_3', 'minus_di_14', 'ema_20_ratio']
+Final selected features: 11
+Calculated scale_pos_weight: 1.48
+Starting hyperparameter tuning with Optuna...
+Optuna best AUC: 0.7826
+Optuna best params: {'n_estimators': 700, 'learning_rate': 0.0964295885633069, 'num_leaves': 76, 'max_depth': 7, 'reg_alpha': 0.0004908576261408424, 'reg_lambda': 0.00013711318927022695, 'colsample_bytree': 0.6083568452297197, 'subsample': 0.9079356060793855, 'min_child_samples': 7}
+Training final LightGBM model with best parameters...
+Evaluating on validation set to find threshold...
+Optimal threshold (Max F1 on Valid) found: 0.3656
+Validation F1 @ optimal threshold: 0.6582
+Validation Precision @ optimal threshold: 0.4906
+Validation Recall @ optimal threshold: 1.0000
+Model saved to models/model_150d.joblib
+--- ML Model Training Complete ---
+
+Training model for timeframe 250 days...
+
+--- Training ML Model for Timeframe 250 ---
+Total signal events for ML (250d): 261
+Train samples: 208, Validation samples: 53
+Performing feature selection...
+Dropped due to high correlation: ['donchian_width_rel_60']
+Features remaining after correlation filter: 16
+Dropped due to low mutual information: ['mom_10d', 'stochk_14_3_3', 'stochd_14_3_3', 'minus_di_14', 'ema_20_ratio']
+Final selected features: 11
+Calculated scale_pos_weight: 1.48
+Starting hyperparameter tuning with Optuna...
+Optuna best AUC: 0.7655
+Optuna best params: {'n_estimators': 400, 'learning_rate': 0.028348981338566764, 'num_leaves': 58, 'max_depth': 5, 'reg_alpha': 0.00018630607725827515, 'reg_lambda': 3.8423378044011576e-05, 'colsample_bytree': 0.6172905158388055, 'subsample': 0.659162313803237, 'min_child_samples': 8}
+Training final LightGBM model with best parameters...
+Evaluating on validation set to find threshold...
+Optimal threshold (Max F1 on Valid) found: 0.3925
+Validation F1 @ optimal threshold: 0.6582
+Validation Precision @ optimal threshold: 0.4906
+Validation Recall @ optimal threshold: 1.0000
+Model saved to models/model_250d.joblib
+--- ML Model Training Complete ---
+
+Training model for timeframe 360 days...
+
+--- Training ML Model for Timeframe 360 ---
+Total signal events for ML (360d): 261
+Train samples: 208, Validation samples: 53
+Performing feature selection...
+Dropped due to high correlation: ['donchian_width_rel_60']
+Features remaining after correlation filter: 16
+Dropped due to low mutual information: ['mom_10d', 'stochk_14_3_3', 'stochd_14_3_3', 'minus_di_14', 'ema_20_ratio']
+Final selected features: 11
+Calculated scale_pos_weight: 1.48
+Starting hyperparameter tuning with Optuna...
+Optuna best AUC: 0.7830
+Optuna best params: {'n_estimators': 800, 'learning_rate': 0.08800267668970921, 'num_leaves': 29, 'max_depth': 5, 'reg_alpha': 0.0033160191755628875, 'reg_lambda': 0.4056460415390274, 'colsample_bytree': 0.638568271566163, 'subsample': 0.9945065145755768, 'min_child_samples': 8}
+Training final LightGBM model with best parameters...
+Evaluating on validation set to find threshold...
+Optimal threshold (Max F1 on Valid) found: 0.3743
+Validation F1 @ optimal threshold: 0.6582
+Validation Precision @ optimal threshold: 0.4906
+Validation Recall @ optimal threshold: 1.0000
+Model saved to models/model_360d.joblib
+--- ML Model Training Complete ---
+
+All models trained successfully!
