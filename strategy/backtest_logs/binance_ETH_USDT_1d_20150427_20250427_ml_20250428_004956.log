@@ -1,0 +1,18 @@
+2025-04-28 00:49:56,811 - __main__ - INFO - Starting backtest with ml strategy
+2025-04-28 00:49:56,812 - __main__ - INFO - Data path: data/1d_timeframe/binance/binance_ETH_USDT_1d_20150427_20250427.csv
+2025-04-28 00:49:56,812 - __main__ - INFO - Train/test split: 0.8
+2025-04-28 00:49:56,812 - __main__ - INFO - Using model from: models/model_250d.joblib
+2025-04-28 00:49:56,820 - __main__ - INFO - Loaded data with shape: (1979, 6)
+2025-04-28 00:49:57,286 - __main__ - INFO - 
+Backtest Results:
+2025-04-28 00:49:57,286 - __main__ - INFO - CAGR: 68.44%
+2025-04-28 00:49:57,287 - __main__ - INFO - Annual Volatility: 57.50%
+2025-04-28 00:49:57,288 - __main__ - INFO - Sharpe Ratio: 1.19
+2025-04-28 00:49:57,288 - __main__ - INFO - Sortino Ratio: 1.64
+2025-04-28 00:49:57,289 - __main__ - INFO - Max Drawdown: -79.35%
+2025-04-28 00:49:57,289 - __main__ - INFO - Calmar Ratio: 0.86
+2025-04-28 00:49:57,290 - __main__ - INFO - Strategy Return: 1556.15%
+2025-04-28 00:49:57,290 - __main__ - INFO - Buy & Hold Return: 1082.80%
+2025-04-28 00:49:57,290 - __main__ - INFO - Win Rate: 43.91%
+2025-04-28 00:49:57,290 - __main__ - INFO - Gain/Loss Ratio: 1.10
+2025-04-28 00:49:57,304 - __main__ - INFO - Results saved to: strategy/backtest_logs/binance_ETH_USDT_1d_20150427_20250427_ml_20250428_004956_results.csv
