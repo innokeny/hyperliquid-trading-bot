@@ -1,0 +1,3 @@
+"""
+Trading bot package initialization.
+""" 
