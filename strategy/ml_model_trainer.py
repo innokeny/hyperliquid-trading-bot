@@ -211,42 +211,30 @@ def train_ml_model(data: pd.DataFrame, timeframe: int, output_dir: str, n_optuna
     ml_data = ml_data.dropna(subset=FEATURE_COLS + [target_col])
 
     if ml_data.empty or len(ml_data) < 10:
-        logger.info(f"Not enough signal events ({len(ml_data)}) for training/validation/testing. Cannot train ML model.")
+        logger.info(f"Not enough signal events ({len(ml_data)}) for training. Cannot train ML model.")
         return None
 
     logger.info(f"Total signal events for ML ({timeframe}d): {len(ml_data)}")
     X = ml_data[FEATURE_COLS]
     y = ml_data[target_col]
 
-    # Split data into train and validation sets
-    train_size = int(len(X) * 0.8)
-    X_train, X_valid = X[:train_size], X[train_size:]
-    y_train, y_valid = y[:train_size], y[train_size:]
-
-    logger.info(f"Train samples: {len(X_train)}, Validation samples: {len(X_valid)}")
-
-    if len(X_train) == 0 or len(np.unique(y_train)) < 2:
-        logger.info("Not enough training data or only one class present. Cannot train.")
-        return None
-
     logger.info("Performing feature selection...")
-    selected_features = list(X_train.columns)
+    selected_features = list(X.columns)
 
     # Correlation-based feature selection
-    corr_matrix = X_train.corr().abs()
+    corr_matrix = X.corr().abs()
     upper_tri = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
     to_drop_corr = [column for column in upper_tri.columns if any(upper_tri[column] > high_correlation_threshold)]
     selected_features = [f for f in selected_features if f not in to_drop_corr]
     logger.info(f"Dropped due to high correlation: {to_drop_corr}")
     logger.info(f"Features remaining after correlation filter: {len(selected_features)}")
 
-    X_train = X_train[selected_features]
-    X_valid = X_valid[selected_features] if not X_valid.empty else X_valid
+    X = X[selected_features]
 
     # Mutual Information based feature selection
-    if len(selected_features) > 1 and len(X_train) > 0:
+    if len(selected_features) > 1 and len(X) > 0:
         try:
-            mi_scores = mutual_info_classif(X_train, y_train, random_state=42)
+            mi_scores = mutual_info_classif(X, y, random_state=42)
             mi_series = pd.Series(mi_scores, index=selected_features).sort_values(ascending=False)
             to_keep_mi = mi_series[mi_series > feature_selection_threshold].index.tolist()
             if len(to_keep_mi) < 2:
@@ -258,8 +246,7 @@ def train_ml_model(data: pd.DataFrame, timeframe: int, output_dir: str, n_optuna
             logger.info(f"Dropped due to low mutual information: {to_drop_mi}")
             logger.info(f"Final selected features: {len(selected_features)}")
 
-            X_train = X_train[selected_features]
-            X_valid = X_valid[selected_features] if not X_valid.empty else X_valid
+            X = X[selected_features]
         except Exception as e:
             logger.info(f"Warning: Error during MI feature selection - {e}. Keeping all features after correlation.")
 
@@ -269,10 +256,9 @@ def train_ml_model(data: pd.DataFrame, timeframe: int, output_dir: str, n_optuna
 
     # Scale features
     scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_valid_scaled = scaler.transform(X_valid) if not X_valid.empty else np.array([])
+    X_scaled = scaler.fit_transform(X)
 
-    scale_pos_weight = len(y_train[y_train == 0]) / (len(y_train[y_train == 1]) + 1e-9)
+    scale_pos_weight = len(y[y == 0]) / (len(y[y == 1]) + 1e-9)
     logger.info(f"Calculated scale_pos_weight: {scale_pos_weight:.2f}")
 
     # Hyperparameter tuning with Optuna
@@ -301,9 +287,9 @@ def train_ml_model(data: pd.DataFrame, timeframe: int, output_dir: str, n_optuna
         cv_scores = []
         tscv = TimeSeriesSplit(n_splits=n_cv_splits)
 
-        for train_idx, val_idx in tscv.split(X_train_scaled):
-            X_fold_train, y_fold_train = X_train_scaled[train_idx], y_train.iloc[train_idx]
-            X_fold_val, y_fold_val = X_train_scaled[val_idx], y_train.iloc[val_idx]
+        for train_idx, val_idx in tscv.split(X_scaled):
+            X_fold_train, y_fold_train = X_scaled[train_idx], y.iloc[train_idx]
+            X_fold_val, y_fold_val = X_scaled[val_idx], y.iloc[val_idx]
 
             if len(np.unique(y_fold_train)) < 2 or len(np.unique(y_fold_val)) < 2:
                 continue
@@ -336,36 +322,13 @@ def train_ml_model(data: pd.DataFrame, timeframe: int, output_dir: str, n_optuna
     final_params.update(best_params)
 
     lgb_clf_final = lgb.LGBMClassifier(**final_params)
-    lgb_clf_final.fit(X_train_scaled, y_train,
-                     eval_set=[(X_valid_scaled, y_valid)] if not X_valid.empty else None,
-                     eval_metric='auc',
-                     callbacks=[lgb.early_stopping(10, verbose=False)] if not X_valid.empty else None)
-
-    # Find optimal threshold
-    optimal_threshold = 0.5
-    if not X_valid.empty and len(np.unique(y_valid)) > 1:
-        logger.info("Evaluating on validation set to find threshold...")
-        y_pred_proba_valid = lgb_clf_final.predict_proba(X_valid_scaled)[:, 1]
-        precision, recall, thresholds = precision_recall_curve(y_valid, y_pred_proba_valid)
-        f1_scores = 2 * recall * precision / (recall + precision + 1e-9)
-        valid_f1_scores = f1_scores[:-1]
-        valid_thresholds = thresholds
-
-        if len(valid_thresholds) > 0:
-            optimal_idx = np.argmax(valid_f1_scores)
-            optimal_threshold = valid_thresholds[optimal_idx]
-            logger.info(f"Optimal threshold (Max F1 on Valid) found: {optimal_threshold:.4f}")
-            logger.info(f"Validation F1 @ optimal threshold: {valid_f1_scores[optimal_idx]:.4f}")
-            logger.info(f"Validation Precision @ optimal threshold: {precision[optimal_idx]:.4f}")
-            logger.info(f"Validation Recall @ optimal threshold: {recall[optimal_idx]:.4f}")
-        else:
-            logger.info("Warning: Could not find threshold from validation set. Using 0.5.")
+    lgb_clf_final.fit(X_scaled, y)
 
     # Save model and components
     model_data = {
         'model': lgb_clf_final,
         'scaler': scaler,
-        'threshold': optimal_threshold,
+        'threshold': 0.5,  # Default threshold since we're not using validation set
         'selected_features': selected_features,
         'timeframe': timeframe
     }
@@ -383,8 +346,6 @@ def main():
                       help='Path to the data file')
     parser.add_argument('--output_dir', type=str, default='models',
                       help='Directory to save the trained models')
-    parser.add_argument('--train_test_split', type=float, default=0.8,
-                      help='Proportion of data to use for training (default: 0.8)')
     parser.add_argument('--n_optuna_trials', type=int, default=100,
                       help='Number of Optuna trials for hyperparameter tuning (default: 100)')
     parser.add_argument('--n_cv_splits', type=int, default=5,
@@ -402,20 +363,16 @@ def main():
     logger.info(f"Loading data from {args.data_path}")
     data = pd.read_csv(args.data_path, index_col=0, parse_dates=True)
     
-    # Calculate split index for training data
-    split_idx = int(len(data) * args.train_test_split)
-    train_data = data.iloc[:split_idx]
-    
-    logger.info(f"Data split: {len(train_data)} rows for training ({args.train_test_split*100:.0f}%)")
+    logger.info(f"Total data points: {len(data)}")
     
     # Prepare features and target
-    train_data = calculate_ml_features(train_data)
-    train_data = create_target_variable_atr(train_data)
+    data = calculate_ml_features(data)
+    data = create_target_variable_atr(data)
     
     # Train models for each timeframe
     for timeframe in LOOK_BACK_WINDOWS:
         logger.info(f"\nTraining model for timeframe {timeframe} days...")
-        train_ml_model(train_data, timeframe, args.output_dir, 
+        train_ml_model(data, timeframe, args.output_dir, 
                       n_optuna_trials=args.n_optuna_trials,
                       n_cv_splits=args.n_cv_splits,
                       feature_selection_threshold=args.feature_selection_threshold,

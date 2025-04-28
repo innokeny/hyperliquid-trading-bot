@@ -13,19 +13,17 @@ class DonchianChannelsMLStrategy(Strategy):
     """
     Implementation of the Donchian Channels strategy with ML filtering.
     """
-    def __init__(self, ml_enabled=True, train_test_split=0.8, model_path=None, **kwargs):
+    def __init__(self, ml_enabled=True, model_path=None, **kwargs):
         """
         Initialize the ML-enhanced Donchian Channels strategy.
         
         Args:
             ml_enabled (bool): Whether to use ML filtering
-            train_test_split (float): Proportion of data used for training (default: 0.8)
             model_path (str): Path to the pre-trained model file
             **kwargs: Keyword arguments to pass to the parent Strategy class
         """
         super().__init__(**kwargs)
         self.ml_enabled = ml_enabled
-        self.train_test_split = train_test_split
         
         # ML models and parameters
         self.ml_models = {}

@@ -37,8 +37,6 @@ def main():
                       help='Type of strategy to use')
     parser.add_argument('--output_dir', type=str, default='strategy/backtest_logs',
                       help='Directory to save results and logs')
-    parser.add_argument('--train_test_split', type=float, default=0.8,
-                      help='Proportion of data used for training (default: 0.8)')
     parser.add_argument('--model_path', type=str, required=True,
                       help='Path to the trained model file (required for ML strategy)')
     args = parser.parse_args()
@@ -53,7 +51,6 @@ def main():
     logger = setup_logging(log_file)
     logger.info(f"Starting backtest with {args.strategy_type} strategy")
     logger.info(f"Data path: {args.data_path}")
-    logger.info(f"Train/test split: {args.train_test_split}")
     
     if args.strategy_type == 'ml':
         logger.info(f"Using model from: {args.model_path}")
@@ -72,7 +69,6 @@ def main():
         if args.strategy_type == 'ml':
             strategy = DonchianChannelsMLStrategy(
                 ml_enabled=True,
-                train_test_split=args.train_test_split,
                 model_path=args.model_path
             )
         else:

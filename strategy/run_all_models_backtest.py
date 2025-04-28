@@ -21,15 +21,13 @@ def setup_logging(output_dir):
 
 def main():
     # Configuration
-    data_path = "data/1d_timeframe/binance/binance_ETH_USDT_1d_20150427_20250427.csv"
+    data_path = "data/1d_timeframe/binance/test/binance_ETH_USDT_1d_test.csv"
     output_dir = "strategy/backtest_logs"
-    train_test_split = 0.8  # 80% training, 20% testing
     
     # Set up logging
     logger = setup_logging(output_dir)
     logger.info(f"Starting backtest with all models from models directory")
     logger.info(f"Data path: {data_path}")
-    logger.info(f"Train/test split: {train_test_split}")
     
     # Get all model files
     models_dir = "models"
@@ -63,7 +61,6 @@ def main():
                 "--data_path", data_path,
                 "--strategy_type", "ml",
                 "--model_path", model_path,
-                "--train_test_split", str(train_test_split),
                 "--output_dir", output_dir
             ]
             

@@ -1,0 +1,229 @@
+2025-04-28 22:36:03,516 - __main__ - INFO - Starting backtest with all models from models directory
+2025-04-28 22:36:03,517 - __main__ - INFO - Data path: data/1d_timeframe/binance/test/binance_ETH_USDT_1d_test.csv
+2025-04-28 22:36:03,523 - __main__ - INFO - Found 9 model files: ['model_5d.joblib', 'model_10d.joblib', 'model_20d.joblib', 'model_30d.joblib', 'model_60d.joblib', 'model_90d.joblib', 'model_150d.joblib', 'model_250d.joblib', 'model_360d.joblib']
+2025-04-28 22:36:03,523 - __main__ - INFO - Running backtest with model: models/model_5d.joblib
+2025-04-28 22:36:03,523 - __main__ - INFO - Executing command: python strategy/run_backtest.py --data_path data/1d_timeframe/binance/test/binance_ETH_USDT_1d_test.csv --strategy_type ml --model_path models/model_5d.joblib --output_dir strategy/backtest_logs
+2025-04-28 22:36:04,786 - __main__ - INFO - Backtest completed successfully for model_5d.joblib
+2025-04-28 22:36:04,787 - __main__ - INFO - Extracted timeframe 5d from model filename
+Loaded model for timeframe 5d from models/model_5d.joblib
+Calculating ML features...
+ML features calculated. Shape after feature engineering: (396, 24)
+Processing timeframe 5d...
+
+Lookback Window: 5d days
+Period: 0 to 395 (1.08 years)
+CAGR:                          0.97%
+Annualized Volatility:         26.55%
+Sharpe Ratio:                  -0.04
+Sortino Ratio:                 0.03
+Max Drawdown:                  -24.79%
+Calmar Ratio:                  0.04
+----------------------------------------
+Cumulative Return (Strategy):  1.05%
+Cumulative Return (Buy & Hold):-49.38%
+----------------------------------------
+Total Trades:                  7
+Win Rate:                      614.29%
+Gain:Loss Ratio:               1.05
+
+2025-04-28 22:36:04,787 - __main__ - INFO - Running backtest with model: models/model_10d.joblib
+2025-04-28 22:36:04,787 - __main__ - INFO - Executing command: python strategy/run_backtest.py --data_path data/1d_timeframe/binance/test/binance_ETH_USDT_1d_test.csv --strategy_type ml --model_path models/model_10d.joblib --output_dir strategy/backtest_logs
+2025-04-28 22:36:05,917 - __main__ - INFO - Backtest completed successfully for model_10d.joblib
+2025-04-28 22:36:05,917 - __main__ - INFO - Extracted timeframe 10d from model filename
+Loaded model for timeframe 10d from models/model_10d.joblib
+Calculating ML features...
+ML features calculated. Shape after feature engineering: (396, 24)
+Processing timeframe 10d...
+
+Lookback Window: 10d days
+Period: 0 to 395 (1.08 years)
+CAGR:                          0.60%
+Annualized Volatility:         26.60%
+Sharpe Ratio:                  -0.05
+Sortino Ratio:                 0.02
+Max Drawdown:                  -24.79%
+Calmar Ratio:                  0.02
+----------------------------------------
+Cumulative Return (Strategy):  0.66%
+Cumulative Return (Buy & Hold):-49.38%
+----------------------------------------
+Total Trades:                  10
+Win Rate:                      430.00%
+Gain:Loss Ratio:               1.07
+
+2025-04-28 22:36:05,918 - __main__ - INFO - Running backtest with model: models/model_20d.joblib
+2025-04-28 22:36:05,918 - __main__ - INFO - Executing command: python strategy/run_backtest.py --data_path data/1d_timeframe/binance/test/binance_ETH_USDT_1d_test.csv --strategy_type ml --model_path models/model_20d.joblib --output_dir strategy/backtest_logs
+2025-04-28 22:36:06,972 - __main__ - INFO - Backtest completed successfully for model_20d.joblib
+2025-04-28 22:36:06,973 - __main__ - INFO - Extracted timeframe 20d from model filename
+Loaded model for timeframe 20d from models/model_20d.joblib
+Calculating ML features...
+ML features calculated. Shape after feature engineering: (396, 24)
+Processing timeframe 20d...
+
+Lookback Window: 20d days
+Period: 0 to 395 (1.08 years)
+CAGR:                          1.43%
+Annualized Volatility:         26.59%
+Sharpe Ratio:                  -0.02
+Sortino Ratio:                 0.05
+Max Drawdown:                  -24.79%
+Calmar Ratio:                  0.06
+----------------------------------------
+Cumulative Return (Strategy):  1.55%
+Cumulative Return (Buy & Hold):-49.38%
+----------------------------------------
+Total Trades:                  9
+Win Rate:                      477.78%
+Gain:Loss Ratio:               1.06
+
+2025-04-28 22:36:06,974 - __main__ - INFO - Running backtest with model: models/model_30d.joblib
+2025-04-28 22:36:06,974 - __main__ - INFO - Executing command: python strategy/run_backtest.py --data_path data/1d_timeframe/binance/test/binance_ETH_USDT_1d_test.csv --strategy_type ml --model_path models/model_30d.joblib --output_dir strategy/backtest_logs
+2025-04-28 22:36:08,082 - __main__ - INFO - Backtest completed successfully for model_30d.joblib
+2025-04-28 22:36:08,083 - __main__ - INFO - Extracted timeframe 30d from model filename
+Loaded model for timeframe 30d from models/model_30d.joblib
+Calculating ML features...
+ML features calculated. Shape after feature engineering: (396, 24)
+Processing timeframe 30d...
+
+Lookback Window: 30d days
+Period: 0 to 395 (1.08 years)
+CAGR:                          2.26%
+Annualized Volatility:         26.66%
+Sharpe Ratio:                  0.01
+Sortino Ratio:                 0.08
+Max Drawdown:                  -24.79%
+Calmar Ratio:                  0.09
+----------------------------------------
+Cumulative Return (Strategy):  2.46%
+Cumulative Return (Buy & Hold):-49.38%
+----------------------------------------
+Total Trades:                  8
+Win Rate:                      550.00%
+Gain:Loss Ratio:               1.07
+
+2025-04-28 22:36:08,083 - __main__ - INFO - Running backtest with model: models/model_60d.joblib
+2025-04-28 22:36:08,083 - __main__ - INFO - Executing command: python strategy/run_backtest.py --data_path data/1d_timeframe/binance/test/binance_ETH_USDT_1d_test.csv --strategy_type ml --model_path models/model_60d.joblib --output_dir strategy/backtest_logs
+2025-04-28 22:36:09,244 - __main__ - INFO - Backtest completed successfully for model_60d.joblib
+2025-04-28 22:36:09,244 - __main__ - INFO - Extracted timeframe 60d from model filename
+Loaded model for timeframe 60d from models/model_60d.joblib
+Calculating ML features...
+ML features calculated. Shape after feature engineering: (396, 24)
+Processing timeframe 60d...
+
+Lookback Window: 60d days
+Period: 0 to 395 (1.08 years)
+CAGR:                          1.43%
+Annualized Volatility:         26.59%
+Sharpe Ratio:                  -0.02
+Sortino Ratio:                 0.05
+Max Drawdown:                  -24.79%
+Calmar Ratio:                  0.06
+----------------------------------------
+Cumulative Return (Strategy):  1.55%
+Cumulative Return (Buy & Hold):-49.38%
+----------------------------------------
+Total Trades:                  9
+Win Rate:                      477.78%
+Gain:Loss Ratio:               1.06
+
+2025-04-28 22:36:09,245 - __main__ - INFO - Running backtest with model: models/model_90d.joblib
+2025-04-28 22:36:09,245 - __main__ - INFO - Executing command: python strategy/run_backtest.py --data_path data/1d_timeframe/binance/test/binance_ETH_USDT_1d_test.csv --strategy_type ml --model_path models/model_90d.joblib --output_dir strategy/backtest_logs
+2025-04-28 22:36:10,399 - __main__ - INFO - Backtest completed successfully for model_90d.joblib
+2025-04-28 22:36:10,400 - __main__ - INFO - Extracted timeframe 90d from model filename
+Loaded model for timeframe 90d from models/model_90d.joblib
+Calculating ML features...
+ML features calculated. Shape after feature engineering: (396, 24)
+Processing timeframe 90d...
+
+Lookback Window: 90d days
+Period: 0 to 395 (1.08 years)
+CAGR:                          0.60%
+Annualized Volatility:         26.60%
+Sharpe Ratio:                  -0.05
+Sortino Ratio:                 0.02
+Max Drawdown:                  -24.79%
+Calmar Ratio:                  0.02
+----------------------------------------
+Cumulative Return (Strategy):  0.66%
+Cumulative Return (Buy & Hold):-49.38%
+----------------------------------------
+Total Trades:                  10
+Win Rate:                      430.00%
+Gain:Loss Ratio:               1.07
+
+2025-04-28 22:36:10,400 - __main__ - INFO - Running backtest with model: models/model_150d.joblib
+2025-04-28 22:36:10,400 - __main__ - INFO - Executing command: python strategy/run_backtest.py --data_path data/1d_timeframe/binance/test/binance_ETH_USDT_1d_test.csv --strategy_type ml --model_path models/model_150d.joblib --output_dir strategy/backtest_logs
+2025-04-28 22:36:11,504 - __main__ - INFO - Backtest completed successfully for model_150d.joblib
+2025-04-28 22:36:11,505 - __main__ - INFO - Extracted timeframe 150d from model filename
+Loaded model for timeframe 150d from models/model_150d.joblib
+Calculating ML features...
+ML features calculated. Shape after feature engineering: (396, 24)
+Processing timeframe 150d...
+
+Lookback Window: 150d days
+Period: 0 to 395 (1.08 years)
+CAGR:                          -1.47%
+Annualized Volatility:         26.51%
+Sharpe Ratio:                  -0.13
+Sortino Ratio:                 -0.05
+Max Drawdown:                  -24.79%
+Calmar Ratio:                  0.06
+----------------------------------------
+Cumulative Return (Strategy):  -1.60%
+Cumulative Return (Buy & Hold):-49.38%
+----------------------------------------
+Total Trades:                  10
+Win Rate:                      420.00%
+Gain:Loss Ratio:               1.07
+
+2025-04-28 22:36:11,505 - __main__ - INFO - Running backtest with model: models/model_250d.joblib
+2025-04-28 22:36:11,506 - __main__ - INFO - Executing command: python strategy/run_backtest.py --data_path data/1d_timeframe/binance/test/binance_ETH_USDT_1d_test.csv --strategy_type ml --model_path models/model_250d.joblib --output_dir strategy/backtest_logs
+2025-04-28 22:36:12,711 - __main__ - INFO - Backtest completed successfully for model_250d.joblib
+2025-04-28 22:36:12,711 - __main__ - INFO - Extracted timeframe 250d from model filename
+Loaded model for timeframe 250d from models/model_250d.joblib
+Calculating ML features...
+ML features calculated. Shape after feature engineering: (396, 24)
+Processing timeframe 250d...
+
+Lookback Window: 250d days
+Period: 0 to 395 (1.08 years)
+CAGR:                          -0.35%
+Annualized Volatility:         26.40%
+Sharpe Ratio:                  -0.09
+Sortino Ratio:                 -0.01
+Max Drawdown:                  -24.79%
+Calmar Ratio:                  0.01
+----------------------------------------
+Cumulative Return (Strategy):  -0.38%
+Cumulative Return (Buy & Hold):-49.38%
+----------------------------------------
+Total Trades:                  7
+Win Rate:                      614.29%
+Gain:Loss Ratio:               1.04
+
+2025-04-28 22:36:12,712 - __main__ - INFO - Running backtest with model: models/model_360d.joblib
+2025-04-28 22:36:12,712 - __main__ - INFO - Executing command: python strategy/run_backtest.py --data_path data/1d_timeframe/binance/test/binance_ETH_USDT_1d_test.csv --strategy_type ml --model_path models/model_360d.joblib --output_dir strategy/backtest_logs
+2025-04-28 22:36:13,766 - __main__ - INFO - Backtest completed successfully for model_360d.joblib
+2025-04-28 22:36:13,766 - __main__ - INFO - Extracted timeframe 360d from model filename
+Loaded model for timeframe 360d from models/model_360d.joblib
+Calculating ML features...
+ML features calculated. Shape after feature engineering: (396, 24)
+Processing timeframe 360d...
+
+Lookback Window: 360d days
+Period: 0 to 395 (1.08 years)
+CAGR:                          0.97%
+Annualized Volatility:         26.55%
+Sharpe Ratio:                  -0.04
+Sortino Ratio:                 0.03
+Max Drawdown:                  -24.79%
+Calmar Ratio:                  0.04
+----------------------------------------
+Cumulative Return (Strategy):  1.05%
+Cumulative Return (Buy & Hold):-49.38%
+----------------------------------------
+Total Trades:                  7
+Win Rate:                      614.29%
+Gain:Loss Ratio:               1.05
+
+2025-04-28 22:36:13,766 - __main__ - INFO - All backtests completed

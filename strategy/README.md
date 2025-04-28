@@ -56,10 +56,7 @@ The main strategy combines traditional Donchian Channels with machine learning p
 ### Training Models
 
 ```bash
-python ml_model_trainer.py --data_path <path_to_data> --output_dir models --train_test_split 0.8
-```
-```
-python3 stategy/ml_model_trainer.py --data_path data/1d_timeframe/binance/binance_ETH_USDT_1d_20150427_20250427.csv --output_dir models --train_test_split 0.8 --n_optuna_trials 200 --n_cv_splits 5 --feature_selection_threshold 0.001 --high_correlation_threshold 0.95
+python ml_model_trainer.py --data_path <path_to_data> --output_dir models
 ```
 
 ### Running Backtest
@@ -68,22 +65,10 @@ python3 stategy/ml_model_trainer.py --data_path data/1d_timeframe/binance/binanc
 python run_backtest.py --data_path <path_to_data> --strategy_type ml --model_path <path_to_model>
 ```
 
-```
-python3 stategy/run_backtest.py --data_path data/1d_timeframe/binance/binance_ETH_USDT_1d_20150427_20250427.csv --strategy_type ml --model_path models/model_5d.joblib --train_test_split 0.8 --output_dir backtest_logs
-```
-
-```
-python3 run_backtest.py --data_path ../data/1d_timeframe/binance/binance_ETH_USDT=USDT_1d_20150427_20250427.csv --strategy basic --output_path backtest_logs/binance_eth_1d_basic.csv
-```
-
 ### Running All Models Backtest
 
 ```bash
 python run_all_models_backtest.py --data_path <path_to_data>
-```
-
-```
-python3 stategy/run_all_models_backtest.py
 ```
 
 ## Performance Metrics

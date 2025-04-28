@@ -1,0 +1,4 @@
+2025-04-28 22:30:05,856 - __main__ - INFO - Starting backtest with ml strategy
+2025-04-28 22:30:05,857 - __main__ - INFO - Data path: data1d_timeframebinancetestbinance_ETH_USDT_1d_test.csv
+2025-04-28 22:30:05,857 - __main__ - INFO - Using model from: models/model_5d.joblib
+2025-04-28 22:30:05,857 - __main__ - ERROR - Data file not found: data1d_timeframebinancetestbinance_ETH_USDT_1d_test.csv
