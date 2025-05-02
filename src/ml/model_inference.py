@@ -1,154 +1,117 @@
-from typing import Dict, List, Optional, Any, Tuple, Union
-import logging
+import joblib
 import numpy as np
 import pandas as pd
-from datetime import datetime
-from ..data.preprocessing import DataPreprocessor
-import lightgbm as lgb
-from scipy.sparse import spmatrix, csr_matrix
-logger = logging.getLogger(__name__)
+import pandas_ta as ta
 
-class ModelInference:
-    """Handles model inference and prediction processing."""
+from sklearn.preprocessing import StandardScaler
+from lightgbm import LGBMClassifier
 
-    def __init__(self, model_path: str):
-        """
-        Initialize the model inference system.
+class MLInference:
+    FEATURE_COLS = [
+        'rsi_14', 'mom_10d', 'mom_30d', 'stochk_14_3_3', 'stochd_14_3_3',
+        'macd_hist', 'adx_14', 'plus_di_14', 'minus_di_14', 'sma_50_ratio', 'ema_20_ratio',
+        'atr_14_norm', 'bbands_width_20_2', 'volatility_30d', 'volatility_90d',
+        'obv_pct_change_10d',
+        'donchian_width_rel_60'
+    ]
 
-        Args:
-            model_path: Path to the trained model file
-        """
-        self.model_path = model_path
-        self.model = self._load_model()
-        self.preprocessor = DataPreprocessor()
-        logger.info(f"Initialized model inference with model at {model_path}")
+    def __init__(self, path: str):
+        self.path = path
+        self.model, self.scaler, self.features, self.threshold, self.window = self._load_model(path)
+        self._scaled_features = [f'{name}_scaled_by_{self.window}' for name in self.features]
+    
+    @staticmethod
+    def _load_model(path: str) -> tuple[LGBMClassifier, StandardScaler, list[str], float, int]:
+        file: dict = joblib.load(path)
+        return file['model'], file['scaler'], file['selected_features'], file['threshold'], file['timeframe']
 
-    def _load_model(self) -> lgb.Booster:
-        """
-        Load the trained LightGBM model from disk.
+    @classmethod
+    def calc_shared_features(cls, data: pd.DataFrame, TRADING_DAYS_PER_YEAR: int) -> pd.DataFrame:
+        data['rsi_14'] = ta.rsi(data['close'], length=14)
+        
+        data['mom_10d'] = data['close'].pct_change(periods=10)
+        data['mom_30d'] = data['close'].pct_change(periods=30)
+        
+        stoch = ta.stoch(data['high'], data['low'], data['close'], k=14, d=3, smooth_k=3)
+        if stoch is not None:
+            data['stochk_14_3_3'] = stoch['STOCHk_14_3_3']
+            data['stochd_14_3_3'] = stoch['STOCHd_14_3_3']
 
-        Returns:
-            Loaded LightGBM model
-        """
-        try:
-            logger.info(f"Loading LightGBM model from {self.model_path}")
-            model = lgb.Booster(model_file=self.model_path)
-            logger.info("Successfully loaded LightGBM model")
-            return model
-        except Exception as e:
-            logger.error(f"Error loading LightGBM model: {str(e)}")
-            raise
+        macd = ta.macd(data['close'])
+        if macd is not None and 'MACDh_12_26_9' in macd.columns:
+            data['macd_hist'] = macd['MACDh_12_26_9']
+        
+        adx = ta.adx(data['high'], data['low'], data['close'], length=14)
+        if adx is not None:
+            data['adx_14'] = adx['ADX_14']
+            data['plus_di_14'] = adx['DMP_14']
+            data['minus_di_14'] = adx['DMN_14']
+        
+        sma50: np.float64 = ta.sma(data['close'], length=50) # type: ignore
+        ema20: np.float64 = ta.ema(data['close'], length=20) # type: ignore
+        data['sma_50_ratio'] = (data['close'] / sma50) - 1
+        data['ema_20_ratio'] = (data['close'] / ema20) - 1
 
-    def prepare_features(self, candles: List[Dict[str, Any]]) -> pd.DataFrame:
-        """
-        Prepare features for model inference.
+        data['atr_14'] = ta.atr(data['high'], data['low'], data['close'], length=14)
+        data['atr_14_norm'] = data['atr_14'] / data['close']
+        
+        bbands = ta.bbands(data['close'], length=20, std=2)
+        if bbands is not None:
+            data['bbands_width_20_2'] = (bbands['BBU_20_2.0'] - bbands['BBL_20_2.0']) / bbands[f'BBM_{20}_2.0']
+        
+        data['log_returns_1d'] = np.log(data['close'] / data['close'].shift(1))
+        data['volatility_30d'] = data['log_returns_1d'].rolling(window=30).std() * np.sqrt(TRADING_DAYS_PER_YEAR)
+        data['volatility_90d'] = data['log_returns_1d'].rolling(window=90).std() * np.sqrt(TRADING_DAYS_PER_YEAR)
 
-        Args:
-            candles: List of candles
+        if 'volume' in data.columns and data['volume'].nunique() > 1 and data['volume'].sum() > 0:
+            obv = ta.obv(data['close'], data['volume'])
+            if obv is not None:
+                data['obv'] = obv
+                data['obv_pct_change_10d'] = data['obv'].pct_change(periods=10)
+            data = data.drop(columns=['obv'], errors='ignore')
+        else:
+            data['obv_pct_change_10d'] = 0.0
+            if 'obv_pct_change_10d' in cls.FEATURE_COLS:
+                print("Warning: Volume data seems unreliable. OBV feature set to 0.")
 
-        Returns:
-            Processed features DataFrame
-        """
-        try:
-            preprocessed_candles = self.preprocessor.preprocess_candles(candles)
-            normalized_candles = self.preprocessor.normalize_candles(preprocessed_candles)
-            
-            logger.debug(f"Prepared features for inference: {len(normalized_candles)} samples")
-            return normalized_candles
-        except Exception as e:
-            logger.error(f"Error preparing features: {str(e)}")
-            raise
+        dc_temp = ta.donchian(high=data['close'], low=data['close'], length=60)
+        if dc_temp is None:
+            raise ValueError('')
+        dc_temp.rename({
+            'DCL_20_20': 'DCL_60',
+            'DCM_20_20': 'DCM_60',
+            'DCU_20_20': 'DCU_60'
+        })
+        
+        if dc_temp is not None:
+            data['donchian_width_rel_60'] = (dc_temp['DCU_60'] - dc_temp['DCL_60']) / data['close']
+        else:
+            data['donchian_width_rel_60'] = 0.0
 
-    def make_prediction(self, features: pd.DataFrame) -> Dict[str, Any]:
-        """
-        Make predictions using the loaded LightGBM model.
+        data = data.drop(columns=['log_returns_1d'], errors='ignore')
 
-        Args:
-            features: Processed features DataFrame
+        for col in cls.FEATURE_COLS:
+            if col not in data.columns:
+                data[col] = 0.0
 
-        Returns:
-            Dictionary containing prediction results
-        """
-        try:
-            required_features = [
-                'o', 'h', 'l', 'c', 'v', 't'
-            ]
-            
-            missing_features = [f for f in required_features if f not in features.columns]
-            if missing_features:
-                raise ValueError(f"Missing required features: {missing_features}")
+        data[cls.FEATURE_COLS] = data[cls.FEATURE_COLS].shift(1)
 
-            X = features[required_features].values
-            
-            raw_prediction = self.model.predict(X)
-            
-            if isinstance(raw_prediction, np.ndarray):
-                prediction = float(raw_prediction[-1])
-                confidence = float(np.abs(raw_prediction[-1]))
-            elif isinstance(raw_prediction, (spmatrix, csr_matrix)):
-                dense_pred = np.asarray(raw_prediction)
-                prediction = float(dense_pred[-1])
-                confidence = float(np.abs(dense_pred[-1]))
-            else:
-                try:
-                    prediction = float(raw_prediction)
-                    confidence = float(np.abs(raw_prediction))
-                except (TypeError, ValueError) as e:
-                    logger.error(f"Failed to convert prediction to float: {str(e)}")
-                    raise ValueError("Invalid prediction output format")
-            
-            result = {
-                'timestamp': datetime.now().isoformat(),
-                'prediction': prediction,
-                'confidence': confidence,
-                'features_used': required_features,
-                'raw_features': features.iloc[-1].to_dict()
-            }
-            
-            logger.debug(f"Made prediction with confidence: {result['confidence']}")
-            return result
-        except Exception as e:
-            logger.error(f"Error making prediction: {str(e)}")
-            raise
+        data = data.ffill().bfill()
+        data = data.dropna(subset=['close', 'high', 'low', 'asset_return'])
+        return data
+        
 
-    def process_prediction(self, prediction: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Process prediction results into trading signals.
+    def _transform_features(self, data: pd.DataFrame) -> pd.DataFrame:
+        data[self._scaled_features] = self.scaler.transform(data[self.features])
+        return data
 
-        Args:
-            prediction: Raw prediction results
-
-        Returns:
-            Processed trading signals
-        """
-        try:
-            signal = 'BUY' if prediction['prediction'] > 0 else 'SELL'
-            
-            confidence = prediction['confidence']
-            current_price = prediction['raw_features']['c']
-            
-            stop_loss = current_price * (1 - 0.02) if signal == 'BUY' else current_price * (1 + 0.02)
-            take_profit = current_price * (1 + 0.04) if signal == 'BUY' else current_price * (1 - 0.04)
-            
-            position_size = min(1.0, confidence)
-            
-            processed_signal = {
-                'timestamp': prediction['timestamp'],
-                'signal': signal,
-                'confidence': prediction['confidence'],
-                'price_target': take_profit,
-                'stop_loss': stop_loss,
-                'take_profit': take_profit,
-                'position_size': position_size,
-                'metadata': {
-                    'model_version': '1.0',
-                    'prediction_time': prediction['timestamp'],
-                    'raw_prediction': prediction['prediction']
-                }
-            }
-            
-            logger.debug(f"Processed prediction into signal: {processed_signal['signal']}")
-            return processed_signal
-        except Exception as e:
-            logger.error(f"Error processing prediction: {str(e)}")
-            raise 
+    def _predict_model(self, data: pd.DataFrame) -> pd.DataFrame:
+        prediction: np.ndarray = self.model.predict_proba(data[self._scaled_features]) # type: ignore
+        data[f'pred_{self.window}'] = prediction.reshape(-1)
+        data[f'ml_pass_{self.window}'] = data[f'pred_{self.window}'] > self.threshold
+        return data
+       
+    def predict(self, data: pd.DataFrame):
+        data = self._transform_features(data)
+        data = self._predict_model(data)
+        return data
