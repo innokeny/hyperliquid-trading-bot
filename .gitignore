@@ -37,10 +37,10 @@ ENV/
 logs/
 cache/
 models/
-*.log
-*.csv
+# *.log
+# *.csv
 *.json
-*.pkl
+# *.pkl
 *.h5
 *.pth
 *.pt
