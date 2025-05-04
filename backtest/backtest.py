@@ -20,22 +20,33 @@ class BackTest:
     def __init__(self, data: pd.DataFrame):
         self.data = data
     
-    def run(self, strategy: DonchianStrategy) -> BackTestResults:
+    def run(self, strategy: DonchianStrategy) -> tuple[pd.DataFrame, dict[str, BackTestResults]]:
         data = strategy.get_weights(self.data)
-        data = self._calc_returns(data)
-        return self._calc_metrics(data, strategy)
-
-    def _calc_returns(self, data: pd.DataFrame) -> pd.DataFrame:
+        metrics: dict[str, BackTestResults] = {}
+        for w_col in strategy._w_cols:
+            data = self._calc_returns(data, w_col)
+            metrics[w_col] = self._calc_metrics(data, strategy, w_col)
+        data = self._calc_returns(data, 'w_combo')
+        metrics['w_combo'] = self._calc_metrics(data, strategy, 'w_combo')
+        
+        return data, metrics
+    
+    def _calc_asset_returns(self, data: pd.DataFrame):
         _data = data.copy()
         _data['asset_returns'] = _data['close'].pct_change()
-        _data['strategy_return'] = _data['w_combo'].shift(1) * _data['asset_returns']
+        return _data
+
+    def _calc_returns(self, data: pd.DataFrame, w_col: str = 'w_combo') -> pd.DataFrame:
+        _data = data.copy()
+        if 'asset_returns' not in _data.columns:
+            _data = self._calc_asset_returns(_data)
+        _data[f'strategy_return({w_col})'] = _data[w_col].shift(1) * _data['asset_returns']
         return _data
     
-    def _calc_metrics(self, data: pd.DataFrame, strategy: DonchianStrategy) -> BackTestResults:
+    def _calc_metrics(self, data: pd.DataFrame, strategy: DonchianStrategy, w_col: str = 'w_combo', ) -> BackTestResults:
         asset_return = data['asset_returns']
-        strategy_return = data['strategy_return']
+        strategy_return = data[f'strategy_return({w_col})']
         
-        # Dates and duration
         start_date = data.index[0].strftime("%Y-%m-%d")
         end_date = data.index[-1].strftime("%Y-%m-%d")
         duration = (data.index[-1] - data.index[0]).days / 365.25
@@ -89,15 +100,3 @@ class BackTest:
             'CalmarRatio': calmar_ratio,
             'BuyAndHold': buy_and_hold
         }
-
-# def main():
-#     path = '/home/user/education/hyperliquid-trading-bot/data/1d_timeframe/binance/binance_ETH_USDT_1d_20150427_20250427.csv'
-#     data = pd.read_csv(path, index_col='timestamp', parse_dates=True)
-
-#     test = BackTest(data)
-#     strategy = DonchianStrategy()
-#     res = test.run(strategy)
-#     print(res)
-
-# if __name__ == '__main__':
-#     main()

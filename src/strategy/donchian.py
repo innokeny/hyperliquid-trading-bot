@@ -43,14 +43,14 @@ class DonchianStrategy:
         Calculates Donchian Channels (based on close), Trailing Stop, and Trading Signal (Pos).
         """
 
-        donchian = ta.donchian(high=data["close"], low=data["close"], length=window)
+        donchian = ta.donchian(high=data["close"], low=data["close"], lower_length=window, upper_length=window)
         if donchian is None:
             raise ValueError(f'Cant calculate ta.donchian')
         
         donchian.rename({
-            'DCL_20_20': f'DCL_{window}',
-            'DCM_20_20': f'DCM_{window}',
-            'DCU_20_20': f'DCU_{window}'
+            f'DCL_{window}_{window}': f'DCL_{window}',
+            f'DCM_{window}_{window}': f'DCM_{window}',
+            f'DCU_{window}_{window}': f'DCU_{window}'
         }, inplace=True, axis=1)
         
         data = pd.concat([data, donchian], axis=1)

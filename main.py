@@ -10,8 +10,7 @@ from hyperliquid.info import Info
 from src.trading.connection import HyperliquidConnection
 from src.trading.market_data import MarketDataStreamer
 from src.data.market_data import MarketDataCollector
-from src.ml.model_inference import ModelInference
-from src.trading.strategy import TradingStrategy
+from src.strategy import DonchianStrategy
 from src.trading.order_manager import OrderManager
 from src.settings import settings
 
@@ -28,8 +27,7 @@ class TradingBot:
         # Initialize components
         self.streamer = MarketDataStreamer(self.info)
         self.collector = MarketDataCollector(self.streamer, candle_interval="1m", max_candles=1000)
-        self.model_inference = ModelInference(str(settings.MODEL_PATH))
-        self.strategy = TradingStrategy(self.model_inference)
+        self.strategy = DonchianStrategy()
         self.order_manager = OrderManager(self.exchange, self.info)
         
         logger.info("Trading bot initialized successfully")
@@ -37,30 +35,21 @@ class TradingBot:
     async def start(self):
         """Start the trading bot."""
         try:
-            # Start market data collection
             self.collector.start()
             logger.info("Started market data collection")
             
             while True:
-                # Get latest market data
-                latest_candle = self.collector.get_latest_candle()
+                latest_candle = self.collector.candles[:-500]
                 if not latest_candle:
                     await asyncio.sleep(1)
                     continue
                 
-                # Generate trading signals
-                signal = self.strategy.generate_signals(latest_candle)
+                w = self.strategy.get_weights(latest_candle).iloc[-1]['w_combo']
                 
-                # Process signal and execute orders
-                if signal['signal'] != 'HOLD':
-                    await self._process_signal(signal)
+                if abs(w) > 1e-6:
+                    await self._process_signal(w)
                 
-                # Check for stop conditions on existing positions
-                if self.strategy.current_position is not None:
-                    await self._check_stop_conditions(latest_candle)
-                
-                # Sleep to control loop frequency
-                await asyncio.sleep(1)
+                await asyncio.sleep(600)
                 
         except KeyboardInterrupt:
             logger.info("Received shutdown signal")
@@ -69,7 +58,7 @@ class TradingBot:
         finally:
             self.stop()
     
-    async def _process_signal(self, signal: Dict[str, Any]):
+    async def _process_signal(self, signal: float):
         """Process trading signal and execute orders."""
         try:
             if signal['signal'] == 'BUY' and self.strategy.current_position is None:
